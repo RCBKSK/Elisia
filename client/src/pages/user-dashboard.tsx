@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,7 @@ export default function UserDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [activeSection, setActiveSection] = useState("dashboard");
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -94,56 +95,102 @@ export default function UserDashboard() {
           
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md bg-primary text-primary-foreground">
+            <button 
+              onClick={() => setActiveSection("dashboard")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "dashboard" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-dashboard"
+            >
               <i className="fas fa-home"></i>
               <span>Dashboard</span>
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("kingdoms")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "kingdoms" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-kingdoms"
+            >
               <i className="fas fa-castle"></i>
               <span>My Kingdoms</span>
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("contributions")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "contributions" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-contributions"
+            >
               <i className="fas fa-chart-line"></i>
               <span>Contributions</span>
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("wallet")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "wallet" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-wallet"
+            >
               <i className="fas fa-wallet"></i>
               <span>Wallet</span>
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("payments")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "payments" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-payments"
+            >
               <i className="fas fa-money-bill-wave"></i>
               <span>Payment Requests</span>
-            </a>
+            </button>
           </nav>
           
-          {/* User Profile */}
-          <div className="p-4 border-t border-border">
+          {/* User Profile & Logout */}
+          <div className="p-4 border-t border-border space-y-3">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-xs font-medium text-primary-foreground">
-                  {user?.firstName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                  {(user as any)?.firstName?.charAt(0) || (user as any)?.email?.charAt(0) || 'U'}
                 </span>
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">
-                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email}
+                  {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any).lastName || ''}` : (user as any)?.email}
                 </p>
-                <p className="text-xs text-muted-foreground">User</p>
+                <p className="text-xs text-muted-foreground">Kingdom Manager</p>
               </div>
-              <button 
-                onClick={() => {
-                  fetch('/api/logout', { method: 'POST' })
-                    .then(() => {
-                      queryClient.setQueryData(['/api/auth/user'], null);
-                      window.location.reload();
-                    });
-                }} 
-                className="text-muted-foreground hover:text-foreground"
-                data-testid="button-logout"
-              >
-                <i className="fas fa-sign-out-alt"></i>
-              </button>
             </div>
+            <Button 
+              onClick={() => {
+                fetch('/api/logout', { method: 'POST' })
+                  .then(() => {
+                    queryClient.setQueryData(['/api/auth/user'], null);
+                    window.location.href = '/';
+                  })
+                  .catch(() => {
+                    window.location.href = '/';
+                  });
+              }} 
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              data-testid="button-logout"
+            >
+              <i className="fas fa-sign-out-alt mr-2"></i>
+              Logout
+            </Button>
           </div>
         </div>
       </div>

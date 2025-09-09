@@ -1,3 +1,4 @@
+import React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,15 +36,28 @@ export default function PaymentRequestForm() {
     queryKey: ["/api/wallets"],
   });
 
+  const { data: payoutData } = useQuery({
+    queryKey: ["/api/user/payout-summary"],
+  });
+
+  // Calculate available unpaid amount
+  const unpaidAmount = payoutData?.unpaidAmount || 0;
+  const canSubmitPayment = unpaidAmount > 0;
+
   const form = useForm<PaymentRequestFormData>({
     resolver: zodResolver(paymentRequestSchema),
     defaultValues: {
       kingdomId: "",
-      amount: "",
+      amount: unpaidAmount.toFixed(2),
       walletAddress: "",
       description: "",
     },
   });
+
+  // Update amount when unpaid amount changes
+  React.useEffect(() => {
+    form.setValue("amount", unpaidAmount.toFixed(2));
+  }, [unpaidAmount, form]);
 
   const createMutation = useMutation({
     mutationFn: (data: PaymentRequestFormData) => 
@@ -143,15 +157,26 @@ export default function PaymentRequestForm() {
                 <FormItem>
                   <FormLabel>Amount ($)</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      min="0" 
-                      placeholder="0.00" 
-                      {...field} 
-                      data-testid="input-payment-amount"
-                    />
+                    <div className="relative">
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                        {...field}
+                        readOnly
+                        className="bg-muted/50 cursor-not-allowed"
+                        data-testid="input-payment-amount"
+                      />
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <i className="fas fa-calculator text-muted-foreground text-xs"></i>
+                      </div>
+                    </div>
                   </FormControl>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-1">
+                    <i className="fas fa-info-circle"></i>
+                    <span>Amount automatically calculated from unpaid contributions</span>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -212,14 +237,26 @@ export default function PaymentRequestForm() {
               )}
             />
 
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={createMutation.isPending}
-              data-testid="button-submit-payment-request"
-            >
-              {createMutation.isPending ? "Submitting..." : "Submit Payment Request"}
-            </Button>
+            {!canSubmitPayment ? (
+              <div className="w-full p-4 bg-muted/30 rounded-lg border border-dashed border-muted">
+                <div className="text-center">
+                  <i className="fas fa-info-circle text-muted-foreground text-lg mb-2"></i>
+                  <p className="text-sm text-muted-foreground mb-1">No unpaid contributions available</p>
+                  <p className="text-xs text-muted-foreground">
+                    Complete more kingdom development tasks to earn payment requests
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={createMutation.isPending || !canSubmitPayment}
+                data-testid="button-submit-payment-request"
+              >
+                {createMutation.isPending ? "Submitting..." : `Request Payment ($${unpaidAmount.toFixed(2)})`}
+              </Button>
+            )}
           </form>
         </Form>
       </CardContent>

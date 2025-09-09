@@ -36,9 +36,11 @@
   --sidebar-accent-foreground: hsl(217, 91%, 60%);
   --sidebar-border: hsl(217, 32%, 17%);
   --sidebar-ring: hsl(217, 91%, 60%);
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Menlo, monospace;
+  --font-sans: "Inter", "Poppins", system-ui, sans-serif;
+  --font-serif: "Playfair Display", "Merriweather", Georgia, serif;
+  --font-mono: "JetBrains Mono", "Fira Code", Menlo, monospace;
+  --font-brand: "Playfair Display", serif;
+  --font-heading: "Outfit", "Space Grotesk", sans-serif;
   --radius: 0.5rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(217, 91%, 60% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(217, 91%, 60% / 0.00);
@@ -114,5 +116,35 @@
   
   .progress-bar {
     background: linear-gradient(90deg, hsl(43, 96%, 56%) 0%, hsl(217, 91%, 60%) 100%);
+  }
+  
+  .elisia-brand {
+    font-family: var(--font-brand);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  
+  .elisia-heading {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  
+  .elisia-hero {
+    font-family: var(--font-brand);
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, hsl(43, 96%, 56%) 0%, hsl(217, 91%, 60%) 50%, hsl(43, 96%, 56%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .elisia-subtitle {
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: hsl(215, 20.2%, 65.1%);
   }
 }

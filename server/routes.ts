@@ -11,6 +11,7 @@ import {
   registerSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import { getAllUsersContributions, getContributionsForKingdoms } from "./services/lok-api";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -236,6 +237,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching all kingdoms:", error);
       res.status(500).json({ message: "Failed to fetch kingdoms" });
+    }
+  });
+
+  // Land contributions routes
+  app.get('/api/admin/land-contributions', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { period = 'currentWeek', customDays } = req.query;
+      const result = await getAllUsersContributions(
+        period as string, 
+        customDays ? parseInt(customDays as string) : undefined
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching land contributions:", error);
+      res.status(500).json({ message: "Failed to fetch land contributions" });
+    }
+  });
+
+  app.get('/api/user/land-contributions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { period = 'currentWeek', customDays } = req.query;
+      
+      // Get user's kingdoms first
+      const kingdoms = await storage.getUserKingdoms(userId);
+      const kingdomIds = kingdoms.map((k: any) => k.name); // Using name as kingdom ID for now
+      
+      const result = await getContributionsForKingdoms(
+        kingdomIds,
+        period as string,
+        customDays ? parseInt(customDays as string) : undefined
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching user land contributions:", error);
+      res.status(500).json({ message: "Failed to fetch land contributions" });
     }
   });
 

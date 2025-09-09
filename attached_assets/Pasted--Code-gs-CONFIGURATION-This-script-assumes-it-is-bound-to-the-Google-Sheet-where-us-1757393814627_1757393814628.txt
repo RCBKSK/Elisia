@@ -1,0 +1,735 @@
+// Code.gs
+
+// --- CONFIGURATION ---
+// This script assumes it is bound to the Google Sheet where user data is stored.
+const USER_SHEET_NAME = 'Sheet1'; // <<< IMPORTANT: REPLACE WITH YOUR SHEET NAME (e.g., 'Sheet1', 'Users')
+// Changed ADMIN_USERNAME to ADMIN_USERNAMES (plural) to support multiple admins.
+const ADMIN_USERNAMES = ["HelenA", "RCBK.dev", "Mlands1"]; // Updated admin usernames
+
+// These are the Land IDs for which the API will be called to fetch base data.
+// The contributions will then be filtered by Kingdom ID from this fetched data.
+const ALL_LAND_IDS = [
+  "140578", "140322", "140066", "140320", "140064"
+];
+// --- DO NOT MODIFY BELOW THIS LINE ---
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index');
+}
+
+/**
+ * Gets the user data sheet from the active spreadsheet.
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet} The Google Sheet for user data.
+ * @throws {Error} If the specified sheet name is not found.
+ */
+function getUserDataSheet() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet(); // Automatically gets the bound spreadsheet
+  const sheet = spreadsheet.getSheetByName(USER_SHEET_NAME);
+  if (!sheet) {
+    throw new Error(`Sheet with name "${USER_SHEET_NAME}" not found in the active spreadsheet.`);
+  }
+  return sheet;
+}
+
+/**
+ * Registers a new user in the Google Sheet with duplicate checks.
+ * @param {string} username - The username for the new user.
+ * @param {string} walletAddress - The user's wallet address (optional, can be empty).
+ * @param {string[]} kingdomIds - An array of kingdom IDs.
+ * @returns {object} An object indicating success or failure.
+ */
+function registerUser(username, walletAddress, kingdomIds) {
+  try {
+    const sheet = getUserDataSheet();
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0]; // Assuming headers are in the first row
+    const existingUsers = data.slice(1); // All rows except header
+
+    const USERNAME_COL = 0; // Assuming Username is in column A (index 0)
+    const WALLET_COL = 1; // Assuming Wallet Address is in column B (index 1)
+    const KINGDOM_IDS_COL = 2; // Assuming Kingdom IDs is in column C (index 2)
+
+    // Validate if mandatory headers exist (optional but good practice)
+    if (headers[USERNAME_COL] !== 'Username' || headers[WALLET_COL] !== 'Wallet Address' || headers[KINGDOM_IDS_COL] !== 'Kingdom IDs') {
+        Logger.log("Sheet headers mismatch. Expected: Username, Wallet Address, Kingdom IDs");
+        return { success: false, message: "Sheet setup error: Column headers are incorrect. Please ensure the first row is 'Username', 'Wallet Address', 'Kingdom IDs'." };
+    }
+
+    // 1. Check for duplicate username
+    if (existingUsers.some(row => row[USERNAME_COL] && String(row[USERNAME_COL]).toLowerCase() === username.toLowerCase())) {
+      return { success: false, message: "Username already exists. Please choose a different one." };
+    }
+
+    // 2. Check for duplicate wallet address (ONLY if walletAddress is provided)
+    if (walletAddress && walletAddress.trim() !== '') { // Only check if wallet address is not empty
+        const trimmedWallet = walletAddress.trim();
+        if (existingUsers.some(row => row[WALLET_COL] && String(row[WALLET_COL]).toLowerCase() === trimmedWallet.toLowerCase())) {
+            return { success: false, message: "Wallet Address is already registered to another user." };
+        }
+    }
+
+    // 3. Check for duplicate kingdom IDs against ALL existing users
+    for (const newKid of kingdomIds) {
+        if (!newKid) continue; // Skip empty strings
+        for (const row of existingUsers) {
+            const existingKingdoms = String(row[KINGDOM_IDS_COL] || '').split(',').map(id => id.trim()).filter(id => id !== '');
+            if (existingKingdoms.includes(newKid)) {
+                return { success: false, message: `Kingdom ID '${newKid}' is already registered to another user.` };
+            }
+        }
+    }
+
+    // If all checks pass, append new user data
+    sheet.appendRow([username, walletAddress.trim(), kingdomIds.join(',')]); // Store trimmed wallet
+    return { success: true, message: "User registered successfully." };
+  } catch (error) {
+    Logger.log("Error in registerUser: " + error.message);
+    return { success: false, message: "Server error during registration: " + error.message };
+  }
+}
+
+/**
+ * Logs in a user by checking their username.
+ * @param {string} username - The username to log in.
+ * @returns {object} An object indicating success/failure and user data if successful.
+ */
+function loginUser(username) {
+  Logger.log(`[loginUser] Attempting login for username: ${username}`);
+
+  // Check if the username is one of the defined admin usernames
+  if (ADMIN_USERNAMES.map(name => name.toLowerCase()).includes(username.toLowerCase())) {
+      Logger.log(`[loginUser] Admin user '${username}' detected. Bypassing sheet lookup.`);
+      return { success: true, user: { username: username, walletAddress: "ADMIN_WALLET", kingdomIds: [] } }; // Admin has no specific kingdom IDs tied to their account. Added dummy wallet for consistency.
+  }
+
+  try {
+    const sheet = getUserDataSheet();
+    const data = sheet.getDataRange().getValues();
+    Logger.log(`[loginUser] Fetched sheet data. Total rows: ${data.length}`);
+    const existingUsers = data.slice(1); // All rows except header
+
+    const USERNAME_COL = 0;
+    const WALLET_COL = 1;
+    const KINGDOM_IDS_COL = 2;
+
+    for (let i = 0; i < existingUsers.length; i++) { // Iterate through user rows (excluding header)
+      const currentRow = existingUsers[i];
+      const sheetUsername = currentRow[USERNAME_COL];
+      Logger.log(`[loginUser] Checking row ${i + 2}: Username in sheet: '${sheetUsername}', Wallet: '${currentRow[WALLET_COL]}', Kingdoms: '${currentRow[KINGDOM_IDS_COL]}'`);
+
+      if (sheetUsername && String(sheetUsername).toLowerCase() === username.toLowerCase()) {
+        const user = {
+          username: sheetUsername,
+          walletAddress: currentRow[WALLET_COL] || '', // Ensure walletAddress is always a string, even if empty in sheet
+          kingdomIds: String(currentRow[KINGDOM_IDS_COL] || '').split(',').map(id => id.trim()).filter(id => id !== '')
+        };
+        Logger.log(`[loginUser] User found: ${JSON.stringify(user)}`);
+        return { success: true, user: user };
+      }
+    }
+    Logger.log(`[loginUser] No regular user found for username: ${username}`);
+    return { success: false, message: "Invalid username." };
+  } catch (error) {
+    Logger.log(`[loginUser] Error during login: ${error.message}`);
+    return { success: false, message: "Server error during login: " + error.message };
+  }
+}
+
+/**
+ * Fetches all registered users for the admin dashboard.
+ * @returns {object[]} An array of user objects.
+ */
+function getAdminUsers() {
+  try {
+    const sheet = getUserDataSheet();
+    const data = sheet.getDataRange().getValues();
+    const users = [];
+
+    const USERNAME_COL = 0;
+    const WALLET_COL = 1;
+    const KINGDOM_IDS_COL = 2;
+
+    for (let i = 1; i < data.length; i++) { // Start from 1 to skip headers
+      users.push({
+        username: data[i][USERNAME_COL],
+        walletAddress: data[i][WALLET_COL] || '', // Ensure walletAddress is always a string
+        kingdomIds: String(data[i][KINGDOM_IDS_COL] || '').split(',').map(id => id.trim()).filter(id => id !== '')
+      });
+    }
+    return users;
+  } catch (error) {
+    Logger.log("Error in getAdminUsers: " + error.message);
+    return [];
+  }
+}
+
+/**
+ * Updates a user's wallet address in the Google Sheet.
+ * @param {string} username - The username whose wallet to update.
+ * @param {string} newWalletAddress - The new wallet address. Can be empty to clear it.
+ * @returns {object} An object indicating success or failure.
+ */
+function updateUserWallet(username, newWalletAddress) {
+  Logger.log(`[updateUserWallet] Attempting to update wallet for '${username}' to '${newWalletAddress}'`);
+  try {
+    if (!username) { // Wallet address can now be empty, but username is still required
+      return { success: false, message: "Username cannot be empty." };
+    }
+    newWalletAddress = newWalletAddress.trim(); // Trim any whitespace
+
+    const sheet = getUserDataSheet();
+    const data = sheet.getDataRange().getValues();
+    const USERNAME_COL = 0;
+    const WALLET_COL = 1;
+
+    let userRowIndex = -1;
+
+    // 1. Find the user's row
+    for (let i = 1; i < data.length; i++) { // Start from 1 to skip headers
+      if (data[i][USERNAME_COL] && String(data[i][USERNAME_COL]).toLowerCase() === username.toLowerCase()) {
+        userRowIndex = i; // Store 0-based index of row in 'data' array
+        break;
+      }
+    }
+
+    if (userRowIndex === -1) {
+      Logger.log(`[updateUserWallet] User '${username}' not found.`);
+      return { success: false, message: "User not found." };
+    }
+
+    // 2. Check if the new wallet address already exists for ANY OTHER user
+    // This check should only run if newWalletAddress is NOT empty
+    if (newWalletAddress !== '') {
+        for (let i = 1; i < data.length; i++) {
+            if (i !== userRowIndex) { // Don't check against current user's own row
+                if (data[i][WALLET_COL] && String(data[i][WALLET_COL]).toLowerCase() === newWalletAddress.toLowerCase()) {
+                    Logger.log(`[updateUserWallet] New wallet address '${newWalletAddress}' already exists for another user: '${data[i][USERNAME_COL]}'.`);
+                    return { success: false, message: `Wallet address '${newWalletAddress}' is already registered to another user.` };
+                }
+            }
+        }
+    }
+
+    // 3. Update the wallet address in the sheet
+    // Use 1-based indexing for sheet.getRange(). Row index (userRowIndex + 1), Column index (WALLET_COL + 1)
+    sheet.getRange(userRowIndex + 1, WALLET_COL + 1).setValue(newWalletAddress); // Set the value (can be empty string)
+    Logger.log(`[updateUserWallet] Wallet for '${username}' updated successfully to '${newWalletAddress || "(empty)"}'.`);
+    return { success: true, message: "Wallet address updated successfully." };
+
+  } catch (error) {
+    Logger.log(`[updateUserWallet] Error: ${error.message}`);
+    return { success: false, message: "Server error updating wallet: " + error.message };
+  }
+}
+
+
+/**
+ * Adds a new kingdom ID to a user's existing list of kingdoms.
+ * Performs checks for duplicate kingdom IDs across all users.
+ * @param {string} username - The username to add the kingdom to.
+ * @param {string} newKingdomId - The new kingdom ID to add.
+ * @returns {object} An object indicating success or failure.
+ */
+function addKingdomToUser(username, newKingdomId) {
+  try {
+    if (!newKingdomId) {
+      return { success: false, message: "Kingdom ID cannot be empty." };
+    }
+    newKingdomId = newKingdomId.trim();
+
+    const sheet = getUserDataSheet();
+    const data = sheet.getDataRange().getValues();
+    const USERNAME_COL = 0;
+    const KINGDOM_IDS_COL = 2;
+
+    let userRowIndex = -1; // 0-based index of the user's row in the data array
+    let existingUserKingdoms = [];
+
+    // 1. Find the user's row and their existing kingdom IDs
+    for (let i = 1; i < data.length; i++) { // Start from 1 to skip headers
+      if (data[i][USERNAME_COL] && String(data[i][USERNAME_COL]).toLowerCase() === username.toLowerCase()) {
+        userRowIndex = i; // Store 0-based index of row in 'data' array
+        existingUserKingdoms = String(data[i][KINGDOM_IDS_COL] || '').split(',').map(id => id.trim()).filter(id => id !== '');
+        break;
+      }
+    }
+
+    if (userRowIndex === -1) {
+      return { success: false, message: "User not found." };
+    }
+
+    // 2. Check if the new kingdom ID is already registered to THIS user
+    if (existingUserKingdoms.includes(newKingdomId)) {
+      return { success: false, message: `Kingdom ID '${newKingdomId}' is already registered to your account.` };
+    }
+
+    // 3. Check if the new kingdom ID is already registered to ANY OTHER user
+    for (let i = 1; i < data.length; i++) {
+        if (i !== userRowIndex) { // Don't check against current user's own row
+            const otherUserKingdoms = String(data[i][KINGDOM_IDS_COL] || '').split(',').map(id => id.trim()).filter(id => id !== '');
+            if (otherUserKingdoms.includes(newKingdomId)) {
+                return { success: false, message: `Kingdom ID '${newKingdomId}' is already registered to another user.` }; // Fixed: Changed newKid to newKingdomId for consistency
+            }
+        }
+    }
+
+    // 4. If all checks pass, add the new kingdom ID and update the sheet
+    existingUserKingdoms.push(newKingdomId);
+    // Use 1-based indexing for sheet.getRange(). Row index (userRowIndex + 1), Column index (KINGDOM_IDS_COL + 1)
+    sheet.getRange(userRowIndex + 1, KINGDOM_IDS_COL + 1).setValue(existingUserKingdoms.join(','));
+    return { success: true, message: "Kingdom ID added successfully." };
+  } catch (error) {
+    Logger.log("Error in addKingdomToUser: " + error.message);
+    return { success: false, message: "Server error: " + error.message };
+  }
+}
+
+/**
+ * Deletes a kingdom ID from a user's list of kingdoms.
+ * Prevents deleting the last kingdom ID.
+ * @param {string} username - The username to delete the kingdom from.
+ * @param {string} kingdomIdToDelete - The kingdom ID to delete.
+ * @returns {object} An object indicating success or failure.
+ */
+function deleteKingdomFromUser(username, kingdomIdToDelete) {
+  try {
+    if (!kingdomIdToDelete) {
+      return { success: false, message: "Kingdom ID to delete cannot be empty." };
+    }
+    kingdomIdToDelete = kingdomIdToDelete.trim();
+
+    const sheet = getUserDataSheet();
+    const data = sheet.getDataRange().getValues();
+    const USERNAME_COL = 0;
+    const KINGDOM_IDS_COL = 2;
+
+    let userRowIndex = -1; // 0-based index of the user's row in the data array
+    let existingUserKingdoms = [];
+
+    // Find the user's row and their existing kingdom IDs
+    for (let i = 1; i < data.length; i++) { // Start from 1 to skip headers
+      if (data[i][USERNAME_COL] && String(data[i][USERNAME_COL]).toLowerCase() === username.toLowerCase()) {
+        userRowIndex = i; // Store 0-based index of row in 'data' array
+        existingUserKingdoms = String(data[i][KINGDOM_IDS_COL] || '').split(',').map(id => id.trim()).filter(id => id !== '');
+        break;
+      }
+    }
+
+    if (userRowIndex === -1) {
+      return { success: false, message: "User not found." };
+    }
+
+    const initialLength = existingUserKingdoms.length;
+    const filteredKingdoms = existingUserKingdoms.filter(id => id !== kingdomIdToDelete);
+
+    if (filteredKingdoms.length === initialLength) {
+      return { success: false, message: "Kingdom ID not found for your account." };
+    }
+    if (filteredKingdoms.length === 0) {
+      return { success: false, message: "Cannot delete the last Kingdom ID. A user must have at least one Kingdom ID." };
+    }
+
+    // Update the sheet
+    // Use 1-based indexing for sheet.getRange(). Row index (userRowIndex + 1), Column index (KINGDOM_IDS_COL + 1)
+    sheet.getRange(userRowIndex + 1, KINGDOM_IDS_COL + 1).setValue(filteredKingdoms.join(','));
+    return { success: true, message: "Kingdom ID deleted successfully." };
+  } catch (error) {
+    Logger.log("Error in deleteKingdomFromUser: " + error.message);
+    return { success: false, message: "Server error: " + error.message };
+  }
+}
+
+/**
+ * Helper function to format a Date object (expected to be UTC) to 'YYYY-MM-DD' string.
+ * This directly extracts UTC components to avoid any local timezone interpretations during formatting.
+ * @param {Date} date - The UTC Date object to format.
+ * @returns {string} The formatted date string in 'YYYY-MM-DD' format.
+ */
+function formatDate(date) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Helper function to create a Date object from YYYY-MM-DD string explicitly in UTC.
+ * This ensures consistency for date comparisons, avoiding local timezone offsets.
+ * @param {string} dateString - The date string in YYYY-MM-DD format.
+ * @returns {Date} A Date object normalized to the start of the day in UTC.
+ */
+function createDateFromYYYYMMDD(dateString) {
+  const parts = dateString.split('-').map(Number);
+  // Date.UTC(year, monthIndex, day) creates a Date object at 00:00:00 UTC for the given date.
+  const utcDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+  return utcDate;
+}
+
+
+/**
+ * Generates an array of LOK API compatible 7-day date chunks (Sunday-Saturday)
+ * that cover the entire requested period from overallFromDate to overallToDate.
+ * All internal date calculations for chunking are done in UTC.
+ *
+ * @param {Date} overallFromDateUTC - The start of the overall desired period (UTC Date object).
+ * @param {Date} overallToDateUTC - The end of the overall desired period (UTC Date object).
+ * @returns {Array<Object>} An array of {from: 'YYYY-MM-DD', to: 'YYYY-MM-DD'} objects,
+ * each representing a full Sunday-Saturday 7-day period. These are formatted for the API.
+ */
+function getLokApiCompatibleDateChunks(overallFromDateUTC, overallToDateUTC) {
+  const chunks = [];
+  
+  // Create mutable copies for internal calculations
+  let currentChunkStart = new Date(overallFromDateUTC.getTime());
+  let lastValidSaturday = new Date(overallToDateUTC.getTime());
+
+  // Adjust currentChunkStart to the most recent Sunday (UTC)
+  const dayOfWeekOfOverallFrom = currentChunkStart.getUTCDay(); // Sunday is 0 for UTC
+  if (dayOfWeekOfOverallFrom !== 0) {
+      currentChunkStart.setUTCDate(currentChunkStart.getUTCDate() - dayOfWeekOfOverallFrom);
+  }
+  currentChunkStart.setUTCHours(0, 0, 0, 0); // Ensure it's the start of the day in UTC
+
+
+  // Adjust lastValidSaturday to the next Saturday (UTC) if it's not already Saturday
+  const dayOfWeekOfOverallTo = lastValidSaturday.getUTCDay(); // Saturday is 6 for UTC
+  if (dayOfWeekOfOverallTo !== 6) {
+      lastValidSaturday.setUTCDate(lastValidSaturday.getUTCDate() + (6 - dayOfWeekOfOverallTo));
+  }
+  lastValidSaturday.setUTCHours(0, 0, 0, 0); // Ensure it's the start of the day in UTC
+
+  // Loop, adding 7 days at a time, creating Sunday-Saturday chunks
+  while (currentChunkStart.getTime() <= lastValidSaturday.getTime()) {
+    let currentChunkEnd = new Date(currentChunkStart.getTime());
+    currentChunkEnd.setUTCDate(currentChunkStart.getUTCDate() + 6); // End of the 7-day period (Saturday UTC)
+    currentChunkEnd.setUTCHours(0, 0, 0, 0);
+
+    chunks.push({
+      from: formatDate(currentChunkStart), // Format directly from UTC date object
+      to: formatDate(currentChunkEnd)     // Format directly from UTC date object
+    });
+
+    // Move to the next 7-day period (next Sunday UTC)
+    currentChunkStart.setUTCDate(currentChunkStart.getUTCDate() + 7);
+  }
+
+  Logger.log(`Generated LOK API date chunks for overall range ${formatDate(overallFromDateUTC)} to ${formatDate(overallToDateUTC)}: ${JSON.stringify(chunks)}`);
+  return chunks;
+}
+
+
+/**
+ * Fetches land contribution data from the League of Kingdoms API for given land IDs and period.
+ * This function now explicitly uses UTC Date objects for all internal comparisons.
+ *
+ * @param {Date} overallFromDateUTC - The overall start date (UTC Date object).
+ * @param {Date} overallToDateUTC - The overall end date (UTC Date object).
+ * @returns {object[]} An array of contribution data items, filtered to the exact overall range.
+ */
+function getLokContributionData(overallFromDateUTC, overallToDateUTC) {
+  let allContributions = [];
+  const options = { 'muteHttpExceptions': true };
+
+  Logger.log(`[getLokContributionData] Overall requested period (for filtering, UTC): ${formatDate(overallFromDateUTC)} (ms: ${overallFromDateUTC.getTime()}) to ${formatDate(overallToDateUTC)} (ms: ${overallToDateUTC.getTime()})`);
+
+  // Get the compatible 7-day chunks for the LOK API that cover the overall range
+  const dateChunks = getLokApiCompatibleDateChunks(overallFromDateUTC, overallToDateUTC);
+
+  dateChunks.forEach(chunk => {
+    ALL_LAND_IDS.forEach(landId => {
+      const apiUrl = `https://api-lok-live.leagueofkingdoms.com/api/stat/land/contribution?landId=${landId}&from=${chunk.from}&to=${chunk.to}`;
+      try {
+        const response = UrlFetchApp.fetch(apiUrl, options);
+        const responseCode = response.getResponseCode();
+        const content = response.getContentText();
+
+        if (responseCode === 200) {
+          try {
+            const jsonData = JSON.parse(content);
+            
+            // CRITICAL FIX: Iterate and validate each item, and inject the 'date' property.
+            if (jsonData && jsonData.contribution && Array.isArray(jsonData.contribution)) {
+              let validItemsInChunk = 0;
+              jsonData.contribution.forEach(item => {
+                // Check if item is a valid object and has a numeric 'total'
+                if (item && typeof item === 'object' && typeof item.total === 'number') {
+                  // Inject the 'date' property from the current chunk's 'from' date
+                  // This 'date' represents the start of the 7-day period for this total contribution
+                  item.date = chunk.from; 
+                  allContributions.push(item);
+                  validItemsInChunk++;
+                } else {
+                  Logger.log(`WARN: LOK API response for landId ${landId}, chunk ${chunk.from} to ${chunk.to} contains invalid item (not an object or missing numeric total). Item: ${JSON.stringify(item)}`);
+                }
+              });
+              Logger.log(`LOK API Success for landId: ${landId}, chunk: ${chunk.from} to ${chunk.to}. Data size: ${JSON.stringify(jsonData.contribution).length / 1024} KB. Valid items processed and date injected: ${validItemsInChunk}`);
+            } else {
+               const errorDetails = jsonData && jsonData.err && jsonData.err.code ? `Error Code: ${jsonData.err.code}` : 'No specific error code.';
+               Logger.log(`LOK API (landId: ${landId}, chunk: ${chunk.from} to ${chunk.to}) returned 200 OK but no 'contribution' key, or empty/non-array data. ${errorDetails}. Full Response (truncated): ${content.substring(0, Math.min(content.length, 500))}`);
+            }
+          } catch (jsonError) {
+            Logger.log(`JSON parsing error for landId ${landId}, chunk ${chunk.from} to ${chunk.to}. Error: ${jsonError.message}. Full Response Content: ${content}`);
+          }
+        } else {
+          Logger.log(`LOK API (landId: ${landId}, chunk: ${chunk.from} to ${chunk.to}) returned non-200 status code: ${responseCode}. Full Response Content: ${content}`);
+        }
+      } catch (fetchError) {
+        Logger.log(`Error fetching data for landId ${landId}, chunk ${chunk.from} to ${chunk.to} from LOK API: ${fetchError.message}`);
+      }
+    });
+  });
+
+  Logger.log(`Total raw contributions collected across all API calls BEFORE FINAL FILTER: ${allContributions.length} items. First few: ${JSON.stringify(allContributions.slice(0, 2))}`);
+
+  // Filter contributions based on whether their 7-day period overlaps with the overall requested period.
+  // The 'item.date' is now guaranteed to be present and represents the START of the 7-day period for its 'total' contribution.
+  const filteredToOverallRange = allContributions.filter(item => {
+    // These checks should ideally be redundant now due to the earlier validation/injection,
+    // but keeping them as a final safeguard.
+    if (!item || !item.date || typeof item.total !== 'number') {
+      Logger.log("FILTER_DEBUG: Skipping item as a final safeguard (should ideally be caught earlier). Item:", JSON.stringify(item));
+      return false;
+    }
+
+    const itemWeekStart = createDateFromYYYYMMDD(item.date); // Use UTC parser
+    
+    const itemWeekEnd = new Date(itemWeekStart.getTime()); // Create a new Date object from itemWeekStart's time
+    itemWeekEnd.setUTCDate(itemWeekStart.getUTCDate() + 6); // Calculate the end of the 7-day period in UTC
+    itemWeekEnd.setUTCHours(0, 0, 0, 0); // Normalize to start of day in UTC for accurate comparison
+
+
+    // Overlap condition: [itemWeekStart, itemWeekEnd] overlaps with [overallFromDateUTC, overallToDateUTC]
+    // Overlap if (start1 <= end2) AND (start2 <= end1)
+    const isOverlapping = itemWeekStart.getTime() <= overallToDateUTC.getTime() && overallFromDateUTC.getTime() <= itemWeekEnd.getTime();
+
+    // Detailed logging for each item being filtered
+    Logger.log(`FILTER_DEBUG: Item (API date): ${item.date} (Week: ${formatDate(itemWeekStart)} (ms: ${itemWeekStart.getTime()}) to ${formatDate(itemWeekEnd)} (ms: ${itemWeekEnd.getTime()}) -- UTC) | Overall range (UTC): ${formatDate(overallFromDateUTC)} (ms: ${overallFromDateUTC.getTime()}) to ${formatDate(overallToDateUTC)} (ms: ${overallToDateUTC.getTime()}) | Is Overlapping: ${isOverlapping}`);
+
+    return isOverlapping;
+  });
+
+  Logger.log(`Total contributions AFTER FINAL FILTER: ${filteredToOverallRange.length} items`);
+  const jsonString = JSON.stringify(filteredToOverallRange);
+  Logger.log(`Raw LOK data (after filtering) stringified size (for return): ${jsonString.length / 1024} KB`);
+
+  return filteredToOverallRange;
+}
+
+
+/**
+ * Fetches contributions for a specific user's kingdoms based on a selected period.
+ * @param {string[]} userKingdomIds - Array of kingdom IDs for the current user.
+ * @param {string} period - 'currentWeek', 'lastWeek', 'last2Weeks', 'last3Weeks', 'currentMonth', 'lastMonth', 'customDays'.
+ * @param {number} [numberOfDays] - Optional. Number of days for 'customDays' period.
+ * @returns {object} An object containing data and period dates.
+ */
+function getContributionsForUser(userKingdomIds, period, numberOfDays = null) {
+  // calculateDates now returns UTC Date objects
+  const { from: overallFromDateUTC, to: overallToDateUTC } = calculateDates(period, numberOfDays); 
+
+  // Pass UTC Date objects directly to getLokContributionData
+  const allRawData = getLokContributionData(overallFromDateUTC, overallToDateUTC);
+
+  const filteredData = allRawData.filter(item => userKingdomIds.includes(item.kingdomId));
+
+  // The 'from' and 'to' for display should be the original requested period,
+  // formatted as strings for the frontend.
+  const formattedData = filteredData.map(item => ({
+      ...item,
+      from: formatDate(overallFromDateUTC), // Overall from date for display
+      to: formatDate(overallToDateUTC)    // Overall to date for display
+  }));
+
+  return { data: formattedData, from: formatDate(overallFromDateUTC), to: formatDate(overallToDateUTC) };
+}
+
+/**
+ * Fetches aggregated contributions for all registered users for the admin dashboard.
+ * This function now returns one entry per user with their total contributions across all their kingdoms.
+ * @param {string} period - 'currentWeek', 'lastWeek', 'last2Weeks', 'last3Weeks', 'currentMonth', 'lastMonth', 'customDays'.
+ * @param {number} [numberOfDays] - Optional. Number of days for 'customDays' period.
+ * @returns {object} An object containing aggregated data and period dates.
+ */
+function getAllUsersContributions(period, numberOfDays = null) {
+  // calculateDates now returns UTC Date objects
+  const { from: overallFromDateUTC, to: overallToDateUTC } = calculateDates(period, numberOfDays);
+  
+  const allUsers = getAdminUsers(); // This fetches usernames and their kingdomIds
+  
+  // Pass UTC Date objects directly to getLokContributionData
+  const allRawContributions = getLokContributionData(overallFromDateUTC, overallToDateUTC);
+
+  const aggregatedUserTotals = {}; // Object to store total contributions per username
+
+  // Initialize all users with 0 contributions for the period
+  allUsers.forEach(user => {
+    aggregatedUserTotals[user.username] = {
+      username: user.username,
+      totalContribution: 0
+    };
+  });
+
+  // Aggregate contributions from raw data into user totals
+  allRawContributions.forEach(item => {
+    // Find the user who owns this kingdom ID
+    const ownerUser = allUsers.find(user => user.kingdomIds.includes(item.kingdomId));
+    if (ownerUser) {
+      // Ensure item.total exists and is a number before adding
+      if (item && typeof item.total === 'number') { 
+         aggregatedUserTotals[ownerUser.username].totalContribution += item.total;
+      } else {
+          Logger.log(`WARN: Item missing total or total is not a number in getAllUsersContributions. Item: ${JSON.stringify(item)}`);
+      }
+    } else {
+        Logger.log(`WARN: Kingdom ID '${item.kingdomId}' from LOK API data does not belong to any registered user.`);
+    }
+  });
+
+  // Convert the aggregated object into an array for sorting and display
+  const finalAggregatedData = Object.values(aggregatedUserTotals);
+
+  // Sort by total contribution in descending order
+  finalAggregatedData.sort((a, b) => b.totalContribution - a.totalContribution);
+
+  // Format dates for the frontend response
+  const dataToReturn = { 
+    data: finalAggregatedData, 
+    from: formatDate(overallFromDateUTC), 
+    to: formatDate(overallToDateUTC) 
+  };
+
+  const dataToReturnString = JSON.stringify(dataToReturn);
+  Logger.log(`Size of data returned by getAllUsersContributions: ${dataToReturnString.length / 1024} KB`);
+
+  return dataToReturn;
+}
+
+/**
+ * Calculates and returns the top contributors (usernames) for a given period.
+ * Aggregates contributions by username.
+ * @param {string} period - 'currentWeek', 'lastWeek', 'last2Weeks', 'last3Weeks', 'currentMonth', 'lastMonth', 'customDays'.
+ * @param {number} [numberOfDays] - Optional. Number of days for 'customDays' period.
+ * @returns {object[]} An array of objects, each with username and totalContribution, sorted descending.
+ */
+function getTopContributors(period, numberOfDays = null) {
+  // calculateDates now returns UTC Date objects
+  const { from: overallFromDateUTC, to: overallToDateUTC } = calculateDates(period, numberOfDays);
+  
+  const allUsers = getAdminUsers();
+  
+  // Pass UTC Date objects directly to getLokContributionData
+  const allRawContributions = getLokContributionData(overallFromDateUTC, overallToDateUTC);
+
+  const userContributions = {};
+
+  // Initialize all users with 0 contributions for the period
+  allUsers.forEach(user => {
+    userContributions[user.username] = 0;
+  });
+
+  allRawContributions.forEach(item => {
+    // Find the user who owns this kingdom ID
+    const ownerUser = allUsers.find(user => user.kingdomIds.includes(item.kingdomId));
+    if (ownerUser) {
+        // Ensure item.total exists and is a number before adding
+        if (item && typeof item.total === 'number') { 
+            userContributions[ownerUser.username] += item.total;
+        } else {
+            Logger.log(`WARN: Item missing total or total is not a number in getTopContributors. Item: ${JSON.stringify(item)}`);
+        }
+    } else {
+        Logger.log(`WARN: Kingdom ID '${item.kingdomId}' from LOK API data does not belong to any registered user in getTopContributors.`);
+    }
+  });
+
+  const sortedContributors = Object.keys(userContributions).map(username => ({
+    username: username,
+    totalContribution: userContributions[username]
+  })).sort((a, b) => b.totalContribution - a.totalContribution);
+
+  return { data: sortedContributors, from: formatDate(overallFromDateUTC), to: formatDate(overallToDateUTC) };
+}
+
+/**
+ * Helper function to calculate 'from' and 'to' dates based on a period.
+ * All calculations are done using UTC Date methods to ensure consistency.
+ *
+ * @param {string} period - 'currentWeek', 'lastWeek', 'last2Weeks', 'last3Weeks', 'currentMonth', 'lastMonth', 'customDays'.
+ * @param {number} [customDays] - Optional. Number of days for 'customDays' period.
+ * @returns {object} An object with 'from' and 'to' properties, both UTC Date objects.
+ */
+function calculateDates(period, customDays = null) {
+  const now = new Date();
+  // Get current date's components in UTC
+  const currentYearUTC = now.getUTCFullYear();
+  const currentMonthUTC = now.getUTCMonth(); // 0-indexed
+  const currentDayUTC = now.getUTCDate();
+  const currentDayOfWeekUTC = now.getUTCDay(); // Sunday is 0
+
+  // Calculate yesterday in UTC
+  const yesterdayUTC = new Date(Date.UTC(currentYearUTC, currentMonthUTC, currentDayUTC - 1));
+
+  let fromDateUTC = new Date();
+  let toDateUTC = new Date(yesterdayUTC.getTime()); // Default `toDate` to yesterday UTC
+
+  Logger.log(`[calculateDates] Calculating dates for period: ${period}, customDays: ${customDays}`);
+  Logger.log(`[calculateDates] Current UTC Date: ${formatDate(now)}. Yesterday UTC Date: ${formatDate(yesterdayUTC)}`);
+
+
+  switch (period) {
+    case 'currentMonth':
+      // Current month: From 1st of current UTC month up to yesterday UTC.
+      fromDateUTC = new Date(Date.UTC(currentYearUTC, currentMonthUTC, 1));
+      toDateUTC = new Date(yesterdayUTC.getTime());
+      break;
+    case 'lastMonth':
+      // Full last UTC month (e.g., if current is June, this is May 1 - May 31 UTC).
+      fromDateUTC = new Date(Date.UTC(currentYearUTC, currentMonthUTC - 1, 1));
+      toDateUTC = new Date(Date.UTC(currentYearUTC, currentMonthUTC, 0)); // Last day of previous month UTC
+      break;
+    case 'currentWeek':
+      // Current calendar week, from its most recent Sunday UTC up to yesterday UTC.
+      fromDateUTC = new Date(Date.UTC(currentYearUTC, currentMonthUTC, currentDayUTC - currentDayOfWeekUTC)); // Current week's Sunday UTC
+      toDateUTC = new Date(yesterdayUTC.getTime());
+      break;
+    case 'lastWeek':
+      // Last completed week (Sunday-Saturday UTC).
+      // Find Sunday of last completed week (7 days before current week's Sunday).
+      fromDateUTC = new Date(Date.UTC(currentYearUTC, currentMonthUTC, currentDayUTC - currentDayOfWeekUTC - 7));
+      toDateUTC = new Date(fromDateUTC.getTime());
+      toDateUTC.setUTCDate(fromDateUTC.getUTCDate() + 6); // Saturday of last completed week UTC
+      break;
+    case 'last2Weeks':
+      // Last 14 days ending yesterday UTC.
+      fromDateUTC = new Date(yesterdayUTC.getTime());
+      fromDateUTC.setUTCDate(yesterdayUTC.getUTCDate() - 13);
+      toDateUTC = new Date(yesterdayUTC.getTime());
+      break;
+    case 'last3Weeks':
+      // Last 21 days ending yesterday UTC.
+      fromDateUTC = new Date(yesterdayUTC.getTime());
+      fromDateUTC.setUTCDate(yesterdayUTC.getUTCDate() - 20);
+      toDateUTC = new Date(yesterdayUTC.getTime());
+      break;
+    case 'customDays':
+      if (customDays !== null && customDays > 0) {
+        fromDateUTC = new Date(yesterdayUTC.getTime());
+        fromDateUTC.setUTCDate(yesterdayUTC.getUTCDate() - customDays + 1); // Start (customDays ago including yesterday)
+        toDateUTC = new Date(yesterdayUTC.getTime());
+      } else {
+        Logger.log("[calculateDates] Invalid customDays value. Defaulting to 7 custom days (ending yesterday UTC).");
+        fromDateUTC = new Date(yesterdayUTC.getTime());
+        fromDateUTC.setUTCDate(yesterdayUTC.getUTCDate() - 7 + 1);
+        toDateUTC = new Date(yesterdayUTC.getTime());
+      }
+      break;
+    default:
+      // Default to Current Week if period is not recognized
+      fromDateUTC = new Date(Date.UTC(currentYearUTC, currentMonthUTC, currentDayUTC - currentDayOfWeekUTC));
+      toDateUTC = new Date(yesterdayUTC.getTime());
+      break;
+  }
+
+  Logger.log(`[calculateDates] Overall requested range for period '${period}': From: ${formatDate(fromDateUTC)}, To: ${formatDate(toDateUTC)} (All in UTC)`);
+  return { from: fromDateUTC, to: toDateUTC }; // Return UTC Date objects
+}

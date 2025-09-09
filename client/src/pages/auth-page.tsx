@@ -92,7 +92,7 @@ export default function AuthPage() {
                 <i className="fas fa-crown text-2xl text-accent-foreground"></i>
               </div>
               <CardTitle className="text-2xl">Welcome Back</CardTitle>
-              <p className="text-muted-foreground">Access your League of Kingdoms dashboard</p>
+              <p className="text-muted-foreground">Access your Elisia Land Program dashboard</p>
             </div>
           </CardHeader>
           <CardContent>
@@ -257,10 +257,10 @@ export default function AuthPage() {
         <div className="hidden lg:flex flex-col justify-center space-y-6">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-foreground mb-4">
-              League of Kingdoms
+              Elisia Land Program
             </h1>
             <h2 className="text-2xl font-semibold text-primary mb-4">
-              Land Development Programme
+              Land Development Management
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
               Manage your kingdoms, track contributions, and optimize your land development strategy.

@@ -10,8 +10,8 @@ export default function Landing() {
             <div className="w-16 h-16 mx-auto mb-4 gaming-gradient rounded-full flex items-center justify-center">
               <i className="fas fa-crown text-2xl text-accent-foreground"></i>
             </div>
-            <h2 className="text-2xl font-bold text-foreground">League of Kingdoms</h2>
-            <p className="text-muted-foreground">Land Development Programme</p>
+            <h2 className="text-2xl font-bold text-foreground">Elisia Land Program</h2>
+            <p className="text-muted-foreground">Land Development Management</p>
           </div>
           
           <div className="space-y-4">

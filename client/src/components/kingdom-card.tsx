@@ -291,16 +291,14 @@ export default function KingdomCard({ kingdom }: KingdomCardProps) {
         </div>
         
         <div className="flex space-x-2 mt-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="flex-1" data-testid={`button-add-contribution-${kingdom.id}`}>
-                Add Contribution
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <ContributionForm kingdomId={kingdom.id} />
-            </DialogContent>
-          </Dialog>
+          <div className="flex-1 p-3 bg-muted/30 rounded-lg border border-dashed border-muted">
+            <div className="text-center">
+              <i className="fas fa-chart-line text-muted-foreground text-lg mb-1"></i>
+              <p className="text-xs text-muted-foreground">
+                Contributions auto-sync from League of Kingdoms API
+              </p>
+            </div>
+          </div>
           <Button 
             variant="secondary" 
             size="sm"

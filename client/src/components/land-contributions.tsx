@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +26,7 @@ interface LandContributionsProps {
 }
 
 export default function LandContributions({ isAdmin }: LandContributionsProps) {
+  const queryClient = useQueryClient();
   const [selectedPeriod, setSelectedPeriod] = useState("currentWeek");
   const [customDays, setCustomDays] = useState("");
   const [selectedContinent, setSelectedContinent] = useState("all");
@@ -149,7 +150,12 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                // Invalidate queries to refresh data without page reload
+                queryClient.invalidateQueries({ queryKey: ["/api/user/land-contributions"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/land-contributions"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/land-stats"] });
+              }}
               data-testid="button-refresh-contributions"
             >
               <i className="fas fa-refresh mr-2"></i>

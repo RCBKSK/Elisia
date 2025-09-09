@@ -87,11 +87,16 @@ export default function AuthPage() {
         <Card className="w-full">
           <CardHeader>
             <div className="text-center mb-4">
-              <div className="w-16 h-16 mx-auto mb-4 gaming-gradient rounded-full flex items-center justify-center">
-                <i className="fas fa-crown text-2xl text-accent-foreground"></i>
+              <div className="w-20 h-20 mx-auto mb-6 gaming-gradient rounded-full flex items-center justify-center shadow-xl">
+                <i className="fas fa-crown text-3xl text-accent-foreground"></i>
               </div>
-              <CardTitle className="text-2xl">Welcome Back</CardTitle>
-              <p className="text-muted-foreground">Access your Elisia Land Program dashboard</p>
+              <div className="space-y-2 mb-6">
+                <CardTitle className="elisia-hero text-3xl">Elisia Land Program</CardTitle>
+                <p className="elisia-subtitle text-lg">League of Kingdoms Development Initiative</p>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  Contribute to the kingdom ecosystem and earn rewards for your land development
+                </p>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

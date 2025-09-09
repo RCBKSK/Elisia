@@ -164,8 +164,8 @@ export default function UserDashboard() {
                 <i className="fas fa-crown text-accent-foreground"></i>
               </div>
               <div>
-                <h3 className="font-bold text-foreground">LoK Dashboard</h3>
-                <p className="text-xs text-muted-foreground">Land Development</p>
+                <h3 className="elisia-brand text-foreground">Elisia Land Program</h3>
+                <p className="text-xs text-muted-foreground">Kingdom Dashboard</p>
               </div>
             </div>
           </div>

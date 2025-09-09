@@ -153,8 +153,8 @@ export default function AdminDashboard() {
                 <i className="fas fa-shield-alt text-accent-foreground"></i>
               </div>
               <div>
-                <h3 className="font-bold text-foreground">Admin Panel</h3>
-                <p className="text-xs text-muted-foreground">LoK Management</p>
+                <h3 className="elisia-brand text-foreground">Elisia Land Program</h3>
+                <p className="text-xs text-muted-foreground">Administrator Portal</p>
               </div>
             </div>
           </div>

@@ -28,7 +28,9 @@ export const sessions = pgTable(
 // User storage table.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  username: varchar("username").unique().notNull(),
+  password: varchar("password").notNull(),
+  email: varchar("email"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -138,6 +140,15 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
+export const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export const registerSchema = insertUserSchema.extend({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
 export const insertKingdomSchema = createInsertSchema(kingdoms).omit({
   id: true,
   createdAt: true,
@@ -165,6 +176,8 @@ export const insertPaymentRequestSchema = createInsertSchema(paymentRequests).om
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type LoginData = z.infer<typeof loginSchema>;
+export type RegisterData = z.infer<typeof registerSchema>;
 export type Kingdom = typeof kingdoms.$inferSelect;
 export type InsertKingdom = z.infer<typeof insertKingdomSchema>;
 export type Contribution = typeof contributions.$inferSelect;

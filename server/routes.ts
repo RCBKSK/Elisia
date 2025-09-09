@@ -1,24 +1,28 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, createAdminUser } from "./auth";
 import { 
   insertKingdomSchema, 
   insertContributionSchema, 
   insertWalletSchema, 
-  insertPaymentRequestSchema 
+  insertPaymentRequestSchema,
+  loginSchema,
+  registerSchema 
 } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
+  setupAuth(app);
+  
+  // Create admin user on startup
+  await createAdminUser();
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const user = req.user;
       
       if (!user?.isApproved) {
         return res.status(403).json({ message: "Account pending approval" });
@@ -34,8 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin middleware
   const isAdmin = async (req: any, res: any, next: any) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const user = req.user;
       
       if (!user?.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
@@ -50,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Kingdom routes
   app.get('/api/kingdoms', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const kingdoms = await storage.getUserKingdoms(userId);
       res.json(kingdoms);
     } catch (error) {
@@ -61,7 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/kingdoms', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const data = insertKingdomSchema.parse({ ...req.body, userId });
       const kingdom = await storage.createKingdom(data);
       res.json(kingdom);
@@ -114,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Wallet routes
   app.get('/api/wallets', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const wallets = await storage.getUserWallets(userId);
       res.json(wallets);
     } catch (error) {
@@ -125,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/wallets', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const data = insertWalletSchema.parse({ ...req.body, userId });
       const wallet = await storage.createWallet(data);
       res.json(wallet);
@@ -138,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payment request routes
   app.get('/api/payment-requests', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const requests = await storage.getUserPaymentRequests(userId);
       res.json(requests);
     } catch (error) {
@@ -149,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/payment-requests', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const data = insertPaymentRequestSchema.parse({ ...req.body, userId });
       const request = await storage.createPaymentRequest(data);
       res.json(request);
@@ -216,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { status, adminNotes } = req.body;
-      const processedBy = req.user.claims.sub;
+      const processedBy = req.user.id;
       
       const request = await storage.updatePaymentRequestStatus(id, status, adminNotes, processedBy);
       res.json(request);

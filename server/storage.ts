@@ -6,6 +6,8 @@ import {
   paymentRequests,
   type User,
   type UpsertUser,
+  type LoginData,
+  type RegisterData,
   type Kingdom,
   type InsertKingdom,
   type Contribution,
@@ -21,6 +23,8 @@ import { eq, desc, and, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: RegisterData): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   getPendingUsers(): Promise<User[]>;
   approveUser(id: string): Promise<void>;
@@ -62,6 +66,16 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(userData: RegisterData): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
     return user;
   }
 

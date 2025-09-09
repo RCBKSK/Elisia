@@ -256,34 +256,40 @@ export default function AdminDashboard() {
             </button>
           </nav>
           
-          {/* User Profile */}
-          <div className="p-4 border-t border-border">
+          {/* User Profile & Logout */}
+          <div className="p-4 border-t border-border space-y-3">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-xs font-medium text-primary-foreground">
-                  {user?.firstName?.charAt(0) || user?.email?.charAt(0) || 'A'}
+                  {(user as any)?.firstName?.charAt(0) || (user as any)?.email?.charAt(0) || 'A'}
                 </span>
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">
-                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email}
+                  {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any).lastName || ''}` : (user as any)?.email}
                 </p>
                 <p className="text-xs text-muted-foreground">Administrator</p>
               </div>
-              <button 
-                onClick={() => {
-                  fetch('/api/logout', { method: 'POST' })
-                    .then(() => {
-                      queryClient.setQueryData(['/api/auth/user'], null);
-                      window.location.reload();
-                    });
-                }} 
-                className="text-muted-foreground hover:text-foreground"
-                data-testid="button-logout"
-              >
-                <i className="fas fa-sign-out-alt"></i>
-              </button>
             </div>
+            <Button 
+              onClick={() => {
+                fetch('/api/logout', { method: 'POST' })
+                  .then(() => {
+                    queryClient.setQueryData(['/api/auth/user'], null);
+                    window.location.href = '/';
+                  })
+                  .catch(() => {
+                    window.location.href = '/';
+                  });
+              }} 
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              data-testid="button-logout"
+            >
+              <i className="fas fa-sign-out-alt mr-2"></i>
+              Logout
+            </Button>
           </div>
         </div>
       </div>

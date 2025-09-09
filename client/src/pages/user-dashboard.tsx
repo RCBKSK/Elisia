@@ -13,6 +13,7 @@ import StatCard from "@/components/stat-card";
 import ContributionForm from "@/components/contribution-form";
 import PaymentRequestForm from "@/components/payment-request-form";
 import LandContributions from "@/components/land-contributions";
+import UserPayoutSummary from "@/components/user-payout-summary";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 export default function UserDashboard() {
@@ -208,6 +209,18 @@ export default function UserDashboard() {
               <span>Contributions</span>
             </button>
             <button 
+              onClick={() => setActiveSection("payouts")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "payouts" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-payouts"
+            >
+              <i className="fas fa-money-bill-wave"></i>
+              <span>Payouts</span>
+            </button>
+            <button 
               onClick={() => setActiveSection("wallet")}
               className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
                 activeSection === "wallet" 
@@ -281,6 +294,7 @@ export default function UserDashboard() {
                 {activeSection === "dashboard" && "Dashboard"}
                 {activeSection === "kingdoms" && "My Kingdoms"}
                 {activeSection === "contributions" && "My Contributions"}
+                {activeSection === "payouts" && "Payouts"}
                 {activeSection === "wallet" && "Wallet Management"}
                 {activeSection === "payments" && "Payment Requests"}
               </h1>
@@ -288,6 +302,7 @@ export default function UserDashboard() {
                 {activeSection === "dashboard" && "Welcome back, manage your kingdoms and track contributions"}
                 {activeSection === "kingdoms" && "Manage your registered kingdoms and their details"}
                 {activeSection === "contributions" && "View your contribution history from registered kingdoms"}
+                {activeSection === "payouts" && "Track your earnings and manage payouts"}
                 {activeSection === "wallet" && "Manage your cryptocurrency wallet addresses"}
                 {activeSection === "payments" && "View and create payment requests"}
               </p>
@@ -333,6 +348,11 @@ export default function UserDashboard() {
         
         {/* Dashboard Content */}
         <main className="p-6 space-y-6">
+          {/* Payouts Section */}
+          {activeSection === "payouts" && (
+            <UserPayoutSummary />
+          )}
+
           {/* Dashboard Section */}
           {activeSection === "dashboard" && (
             <>

@@ -61,7 +61,51 @@ export const contributions = pgTable("contributions", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   period: varchar("period").notNull(), // weekly, biweekly, monthly
   description: text("description"),
+  isPaid: boolean("is_paid").default(false), // Track if this contribution has been paid out
+  payoutId: varchar("payout_id"), // Link to specific payout
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Payment settings table (admin configurable)
+export const paymentSettings = pgTable("payment_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  payoutRatePerPoint: decimal("payout_rate_per_point", { precision: 10, scale: 4 }).notNull(), // Amount per contribution point
+  minimumPayout: decimal("minimum_payout", { precision: 10, scale: 2 }).default("10.00"), // Minimum amount for payout
+  payoutFrequency: varchar("payout_frequency").default("monthly"), // weekly, biweekly, monthly
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+});
+
+// Payouts table (tracks actual payments made)
+export const payouts = pgTable("payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  totalPoints: decimal("total_points", { precision: 10, scale: 2 }).notNull(),
+  walletAddress: varchar("wallet_address").notNull(),
+  paymentSettingsId: varchar("payment_settings_id").notNull().references(() => paymentSettings.id), // Reference to settings used
+  status: varchar("status").default("pending"), // pending, processing, completed, failed
+  transactionHash: varchar("transaction_hash"), // Blockchain transaction hash if applicable
+  adminNotes: text("admin_notes"),
+  periodFrom: timestamp("period_from").notNull(), // Start of payout period
+  periodTo: timestamp("period_to").notNull(), // End of payout period
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+  processedBy: varchar("processed_by").references(() => users.id),
+});
+
+// User payout history summary table
+export const userPayoutSummary = pgTable("user_payout_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  lastPayoutDate: timestamp("last_payout_date"),
+  totalEarned: decimal("total_earned", { precision: 10, scale: 2 }).default("0"),
+  totalPaid: decimal("total_paid", { precision: 10, scale: 2 }).default("0"),
+  pendingAmount: decimal("pending_amount", { precision: 10, scale: 2 }).default("0"),
+  unpaidContributions: decimal("unpaid_contributions", { precision: 10, scale: 2 }).default("0"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Wallet addresses table
@@ -90,10 +134,15 @@ export const paymentRequests = pgTable("payment_requests", {
 });
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   kingdoms: many(kingdoms),
   wallets: many(wallets),
   paymentRequests: many(paymentRequests),
+  payouts: many(payouts),
+  payoutSummary: one(userPayoutSummary, {
+    fields: [users.id],
+    references: [userPayoutSummary.userId],
+  }),
 }));
 
 export const kingdomsRelations = relations(kingdoms, ({ one, many }) => ({
@@ -109,6 +158,41 @@ export const contributionsRelations = relations(contributions, ({ one }) => ({
   kingdom: one(kingdoms, {
     fields: [contributions.kingdomId],
     references: [kingdoms.id],
+  }),
+  payout: one(payouts, {
+    fields: [contributions.payoutId],
+    references: [payouts.id],
+  }),
+}));
+
+export const paymentSettingsRelations = relations(paymentSettings, ({ one, many }) => ({
+  updatedByUser: one(users, {
+    fields: [paymentSettings.updatedBy],
+    references: [users.id],
+  }),
+  payouts: many(payouts),
+}));
+
+export const payoutsRelations = relations(payouts, ({ one, many }) => ({
+  user: one(users, {
+    fields: [payouts.userId],
+    references: [users.id],
+  }),
+  paymentSettings: one(paymentSettings, {
+    fields: [payouts.paymentSettingsId],
+    references: [paymentSettings.id],
+  }),
+  processedByUser: one(users, {
+    fields: [payouts.processedBy],
+    references: [users.id],
+  }),
+  contributions: many(contributions),
+}));
+
+export const userPayoutSummaryRelations = relations(userPayoutSummary, ({ one }) => ({
+  user: one(users, {
+    fields: [userPayoutSummary.userId],
+    references: [users.id],
   }),
 }));
 
@@ -174,6 +258,23 @@ export const insertPaymentRequestSchema = createInsertSchema(paymentRequests).om
   processedBy: true,
 });
 
+export const insertPaymentSettingsSchema = createInsertSchema(paymentSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPayoutSchema = createInsertSchema(payouts).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
+});
+
+export const insertUserPayoutSummarySchema = createInsertSchema(userPayoutSummary).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -187,3 +288,9 @@ export type Wallet = typeof wallets.$inferSelect;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
 export type PaymentRequest = typeof paymentRequests.$inferSelect;
 export type InsertPaymentRequest = z.infer<typeof insertPaymentRequestSchema>;
+export type PaymentSettings = typeof paymentSettings.$inferSelect;
+export type InsertPaymentSettings = z.infer<typeof insertPaymentSettingsSchema>;
+export type Payout = typeof payouts.$inferSelect;
+export type InsertPayout = z.infer<typeof insertPayoutSchema>;
+export type UserPayoutSummary = typeof userPayoutSummary.$inferSelect;
+export type InsertUserPayoutSummary = z.infer<typeof insertUserPayoutSummarySchema>;

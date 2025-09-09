@@ -5,14 +5,17 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
+// Use Supabase database URL if available, otherwise fall back to DATABASE_URL
+const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!databaseUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "SUPABASE_DATABASE_URL or DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
-// Configure SSL for Replit environment
-const connectionString = process.env.DATABASE_URL;
+// Configure SSL for Supabase/Replit environment
+const connectionString = databaseUrl;
 export const pool = new Pool({ 
   connectionString,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false

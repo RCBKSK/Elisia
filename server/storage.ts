@@ -4,6 +4,9 @@ import {
   contributions,
   wallets,
   paymentRequests,
+  paymentSettings,
+  payouts,
+  userPayoutSummary,
   type User,
   type UpsertUser,
   type LoginData,
@@ -16,6 +19,12 @@ import {
   type InsertWallet,
   type PaymentRequest,
   type InsertPaymentRequest,
+  type PaymentSettings,
+  type InsertPaymentSettings,
+  type Payout,
+  type InsertPayout,
+  type UserPayoutSummary,
+  type InsertUserPayoutSummary,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -52,6 +61,22 @@ export interface IStorage {
   createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
   getPendingPaymentRequests(): Promise<PaymentRequest[]>;
   updatePaymentRequestStatus(id: string, status: string, adminNotes?: string, processedBy?: string): Promise<PaymentRequest>;
+  
+  // Payment settings operations
+  getActivePaymentSettings(): Promise<PaymentSettings | undefined>;
+  createPaymentSettings(settings: InsertPaymentSettings): Promise<PaymentSettings>;
+  updatePaymentSettings(id: string, settings: Partial<InsertPaymentSettings>): Promise<PaymentSettings>;
+  
+  // Payout operations
+  getUserPayouts(userId: string): Promise<Payout[]>;
+  createPayout(payout: InsertPayout): Promise<Payout>;
+  updatePayoutStatus(id: string, status: string, transactionHash?: string, adminNotes?: string, processedBy?: string): Promise<Payout>;
+  getPendingPayouts(): Promise<Payout[]>;
+  
+  // User payout summary operations
+  getUserPayoutSummary(userId: string): Promise<UserPayoutSummary | undefined>;
+  updateUserPayoutSummary(userId: string, summary: Partial<InsertUserPayoutSummary>): Promise<UserPayoutSummary>;
+  calculateUnpaidContributions(userId: string): Promise<{ amount: number; contributions: Contribution[] }>;
   
   // Admin operations
   getSystemStats(): Promise<{
@@ -224,6 +249,146 @@ export class DatabaseStorage implements IStorage {
       .where(eq(paymentRequests.id, id))
       .returning();
     return updatedRequest;
+  }
+
+  // Payment settings operations
+  async getActivePaymentSettings(): Promise<PaymentSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(paymentSettings)
+      .where(eq(paymentSettings.isActive, true))
+      .orderBy(desc(paymentSettings.createdAt));
+    return settings;
+  }
+
+  async createPaymentSettings(settings: InsertPaymentSettings): Promise<PaymentSettings> {
+    // Deactivate existing settings
+    await db
+      .update(paymentSettings)
+      .set({ isActive: false })
+      .where(eq(paymentSettings.isActive, true));
+    
+    const [newSettings] = await db.insert(paymentSettings).values(settings).returning();
+    return newSettings;
+  }
+
+  async updatePaymentSettings(id: string, settings: Partial<InsertPaymentSettings>): Promise<PaymentSettings> {
+    const [updatedSettings] = await db
+      .update(paymentSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(paymentSettings.id, id))
+      .returning();
+    return updatedSettings;
+  }
+
+  // Payout operations
+  async getUserPayouts(userId: string): Promise<Payout[]> {
+    return db
+      .select()
+      .from(payouts)
+      .where(eq(payouts.userId, userId))
+      .orderBy(desc(payouts.createdAt));
+  }
+
+  async createPayout(payout: InsertPayout): Promise<Payout> {
+    const [newPayout] = await db.insert(payouts).values(payout).returning();
+    
+    // Mark associated contributions as paid
+    if (payout.userId) {
+      await db
+        .update(contributions)
+        .set({ isPaid: true, payoutId: newPayout.id })
+        .where(
+          and(
+            eq(contributions.isPaid, false),
+            sql`${contributions.kingdomId} IN (SELECT id FROM ${kingdoms} WHERE ${kingdoms.userId} = ${payout.userId})`
+          )
+        );
+    }
+    
+    return newPayout;
+  }
+
+  async updatePayoutStatus(
+    id: string,
+    status: string,
+    transactionHash?: string,
+    adminNotes?: string,
+    processedBy?: string
+  ): Promise<Payout> {
+    const [updatedPayout] = await db
+      .update(payouts)
+      .set({
+        status,
+        transactionHash,
+        adminNotes,
+        processedBy,
+        processedAt: new Date(),
+      })
+      .where(eq(payouts.id, id))
+      .returning();
+    return updatedPayout;
+  }
+
+  async getPendingPayouts(): Promise<Payout[]> {
+    return db
+      .select()
+      .from(payouts)
+      .where(eq(payouts.status, "pending"))
+      .orderBy(desc(payouts.createdAt));
+  }
+
+  // User payout summary operations
+  async getUserPayoutSummary(userId: string): Promise<UserPayoutSummary | undefined> {
+    const [summary] = await db
+      .select()
+      .from(userPayoutSummary)
+      .where(eq(userPayoutSummary.userId, userId));
+    return summary;
+  }
+
+  async updateUserPayoutSummary(userId: string, summary: Partial<InsertUserPayoutSummary>): Promise<UserPayoutSummary> {
+    const [existing] = await db
+      .select()
+      .from(userPayoutSummary)
+      .where(eq(userPayoutSummary.userId, userId));
+
+    if (existing) {
+      const [updated] = await db
+        .update(userPayoutSummary)
+        .set({ ...summary, updatedAt: new Date() })
+        .where(eq(userPayoutSummary.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userPayoutSummary)
+        .values({ userId, ...summary })
+        .returning();
+      return created;
+    }
+  }
+
+  async calculateUnpaidContributions(userId: string): Promise<{ amount: number; contributions: Contribution[] }> {
+    const unpaidContributions = await db
+      .select()
+      .from(contributions)
+      .leftJoin(kingdoms, eq(contributions.kingdomId, kingdoms.id))
+      .where(
+        and(
+          eq(kingdoms.userId, userId),
+          eq(contributions.isPaid, false)
+        )
+      )
+      .orderBy(desc(contributions.createdAt));
+
+    const amount = unpaidContributions.reduce((sum, row) => 
+      sum + parseFloat(row.contributions?.amount || "0"), 0);
+
+    return {
+      amount,
+      contributions: unpaidContributions.map(row => row.contributions!).filter(Boolean)
+    };
   }
 
   // Admin operations

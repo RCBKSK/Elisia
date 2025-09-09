@@ -7,6 +7,8 @@ import {
   insertContributionSchema, 
   insertWalletSchema, 
   insertPaymentRequestSchema,
+  insertPaymentSettingsSchema,
+  insertPayoutSchema,
   loginSchema,
   registerSchema 
 } from "@shared/schema";
@@ -320,6 +322,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching land stats:", error);
       res.status(500).json({ message: "Failed to fetch land stats" });
+    }
+  });
+
+  // Payment settings routes (Admin only)
+  app.get('/api/admin/payment-settings', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const settings = await storage.getActivePaymentSettings();
+      res.json(settings || null);
+    } catch (error) {
+      console.error("Error fetching payment settings:", error);
+      res.status(500).json({ message: "Failed to fetch payment settings" });
+    }
+  });
+
+  app.post('/api/admin/payment-settings', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const updatedBy = req.user.id;
+      const data = insertPaymentSettingsSchema.parse({ ...req.body, updatedBy });
+      const settings = await storage.createPaymentSettings(data);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error creating payment settings:", error);
+      res.status(400).json({ message: "Failed to create payment settings" });
+    }
+  });
+
+  app.put('/api/admin/payment-settings/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updatedBy = req.user.id;
+      const data = { ...req.body, updatedBy };
+      const settings = await storage.updatePaymentSettings(id, data);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating payment settings:", error);
+      res.status(400).json({ message: "Failed to update payment settings" });
+    }
+  });
+
+  // Payout routes
+  app.get('/api/payouts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const payouts = await storage.getUserPayouts(userId);
+      res.json(payouts);
+    } catch (error) {
+      console.error("Error fetching user payouts:", error);
+      res.status(500).json({ message: "Failed to fetch payouts" });
+    }
+  });
+
+  app.get('/api/user/payout-summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const [summary, unpaidData] = await Promise.all([
+        storage.getUserPayoutSummary(userId),
+        storage.calculateUnpaidContributions(userId)
+      ]);
+      
+      res.json({
+        summary: summary || {
+          userId,
+          lastPayoutDate: null,
+          totalEarned: "0",
+          totalPaid: "0",
+          pendingAmount: "0",
+          unpaidContributions: "0"
+        },
+        unpaidAmount: unpaidData.amount,
+        unpaidContributions: unpaidData.contributions
+      });
+    } catch (error) {
+      console.error("Error fetching user payout summary:", error);
+      res.status(500).json({ message: "Failed to fetch payout summary" });
+    }
+  });
+
+  // Admin payout management routes
+  app.get('/api/admin/pending-payouts', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const payouts = await storage.getPendingPayouts();
+      res.json(payouts);
+    } catch (error) {
+      console.error("Error fetching pending payouts:", error);
+      res.status(500).json({ message: "Failed to fetch pending payouts" });
+    }
+  });
+
+  app.post('/api/admin/payouts', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const processedBy = req.user.id;
+      const data = insertPayoutSchema.parse({ ...req.body, processedBy });
+      const payout = await storage.createPayout(data);
+      
+      // Update user payout summary
+      const unpaidData = await storage.calculateUnpaidContributions(data.userId);
+      await storage.updateUserPayoutSummary(data.userId, {
+        lastPayoutDate: new Date(),
+        totalPaid: data.totalAmount,
+        pendingAmount: unpaidData.amount.toString(),
+        unpaidContributions: unpaidData.amount.toString()
+      });
+      
+      res.json(payout);
+    } catch (error) {
+      console.error("Error creating payout:", error);
+      res.status(400).json({ message: "Failed to create payout" });
+    }
+  });
+
+  app.put('/api/admin/payouts/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status, transactionHash, adminNotes } = req.body;
+      const processedBy = req.user.id;
+      
+      const payout = await storage.updatePayoutStatus(id, status, transactionHash, adminNotes, processedBy);
+      res.json(payout);
+    } catch (error) {
+      console.error("Error updating payout status:", error);
+      res.status(500).json({ message: "Failed to update payout status" });
     }
   });
 

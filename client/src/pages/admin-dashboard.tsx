@@ -327,35 +327,41 @@ export default function AdminDashboard() {
         
         {/* Dashboard Content */}
         <main className="p-6 space-y-6">
-          {/* Admin Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              title="Total Users"
-              value={stats?.totalUsers?.toString() || "0"}
-              icon="fas fa-users"
-              color="primary"
-            />
-            <StatCard
-              title="Total Kingdoms"
-              value={stats?.totalKingdoms?.toString() || "0"}
-              icon="fas fa-castle"
-              color="accent"
-            />
-            <StatCard
-              title="Pending Approvals"
-              value={stats?.pendingApprovals?.toString() || "0"}
-              icon="fas fa-clock"
-              color="destructive"
-            />
-            <StatCard
-              title="Total Payouts"
-              value={`$${stats?.totalPayouts || "0"}`}
-              icon="fas fa-money-bill-wave"
-              color="emerald"
-            />
-          </div>
+          {/* Overview Section */}
+          {activeSection === "overview" && (
+            <>
+              {/* Admin Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                  title="Total Users"
+                  value={(stats as any)?.totalUsers?.toString() || "0"}
+                  icon="fas fa-users"
+                  color="primary"
+                />
+                <StatCard
+                  title="Total Kingdoms"
+                  value={(stats as any)?.totalKingdoms?.toString() || "0"}
+                  icon="fas fa-castle"
+                  color="accent"
+                />
+                <StatCard
+                  title="Pending Approvals"
+                  value={(stats as any)?.pendingApprovals?.toString() || "0"}
+                  icon="fas fa-clock"
+                  color="destructive"
+                />
+                <StatCard
+                  title="Total Payouts"
+                  value={`$${(stats as any)?.totalPayouts || "0"}`}
+                  icon="fas fa-money-bill-wave"
+                  color="emerald"
+                />
+              </div>
+            </>
+          )}
           
-          {/* Pending Approvals Section */}
+          {/* User Management Section - Only show in overview and users sections */}
+          {(activeSection === "overview" || activeSection === "users") && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* User Approvals */}
             <Card>
@@ -483,11 +489,54 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </div>
+          )}
           
-          {/* Land Analytics Section */}
+          {/* Land Analytics Section - Only show in contributions section */}
+          {activeSection === "contributions" && (
           <div className="space-y-6">
             <AdminLandDashboard />
           </div>
+          )}
+
+          {/* Other Sections */}
+          {activeSection === "kingdoms" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>All Kingdoms</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center py-8">
+                  Kingdom management coming soon. This will show all registered kingdoms with their details.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeSection === "analytics" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Analytics Dashboard</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center py-8">
+                  Advanced analytics dashboard coming soon. This will show detailed reports and charts.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeSection === "settings" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>System Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center py-8">
+                  System configuration settings coming soon. This will allow configuration of application settings.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </main>
       </div>
     </div>

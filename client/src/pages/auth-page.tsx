@@ -41,9 +41,8 @@ export default function AuthPage() {
     mutationFn: (credentials: LoginData) => apiRequest("POST", "/api/login", credentials),
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/auth/user"], data);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({ title: "Success", description: "Logged in successfully" });
-      // The App component will handle redirecting to the appropriate dashboard
-      window.location.reload();
     },
     onError: (error: any) => {
       toast({ 

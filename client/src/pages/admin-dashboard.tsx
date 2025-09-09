@@ -289,10 +289,11 @@ export default function AdminDashboard() {
                 fetch('/api/logout', { method: 'POST' })
                   .then(() => {
                     queryClient.setQueryData(['/api/auth/user'], null);
-                    window.location.href = '/';
+                    queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
                   })
                   .catch(() => {
-                    window.location.href = '/';
+                    queryClient.setQueryData(['/api/auth/user'], null);
+                    queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
                   });
               }} 
               variant="outline"

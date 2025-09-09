@@ -3,8 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import KingdomCard from "@/components/kingdom-card";
 import StatCard from "@/components/stat-card";
 import ContributionForm from "@/components/contribution-form";
@@ -46,6 +49,79 @@ export default function UserDashboard() {
   const { data: wallets = [] } = useQuery({
     queryKey: ["/api/wallets"],
     enabled: isAuthenticated,
+  });
+
+  // Add wallet mutation
+  const [newWalletAddress, setNewWalletAddress] = useState("");
+  const addWalletMutation = useMutation({
+    mutationFn: (address: string) => 
+      apiRequest("POST", "/api/wallets", { address, isPrimary: (wallets as any[]).length === 0 }),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Wallet added successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
+      setNewWalletAddress("");
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({ title: "Error", description: "Failed to add wallet", variant: "destructive" });
+    },
+  });
+
+  // Delete wallet mutation
+  const deleteWalletMutation = useMutation({
+    mutationFn: (walletId: string) => apiRequest("DELETE", `/api/wallets/${walletId}`),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Wallet deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({ title: "Error", description: "Failed to delete wallet", variant: "destructive" });
+    },
+  });
+
+  // Delete kingdom mutation
+  const deleteKingdomMutation = useMutation({
+    mutationFn: (kingdomId: string) => apiRequest("DELETE", `/api/kingdoms/${kingdomId}`),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Kingdom deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/kingdoms"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({ title: "Error", description: "Failed to delete kingdom", variant: "destructive" });
+    },
+  });
+
+  // Get user contributions filtered by registered kingdom IDs
+  const kingdomIds = (kingdoms as any[]).map(k => k.lokKingdomId).filter(Boolean);
+  const { data: userContributions } = useQuery({
+    queryKey: ["/api/user/land-contributions", kingdomIds],
+    enabled: isAuthenticated && kingdomIds.length > 0,
   });
 
   // Calculate stats
@@ -201,52 +277,94 @@ export default function UserDashboard() {
         <header className="bg-card border-b border-border p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground">Welcome back, manage your kingdoms and track contributions</p>
+              <h1 className="text-2xl font-bold text-foreground">
+                {activeSection === "dashboard" && "Dashboard"}
+                {activeSection === "kingdoms" && "My Kingdoms"}
+                {activeSection === "contributions" && "My Contributions"}
+                {activeSection === "wallet" && "Wallet Management"}
+                {activeSection === "payments" && "Payment Requests"}
+              </h1>
+              <p className="text-muted-foreground">
+                {activeSection === "dashboard" && "Welcome back, manage your kingdoms and track contributions"}
+                {activeSection === "kingdoms" && "Manage your registered kingdoms and their details"}
+                {activeSection === "contributions" && "View your contribution history from registered kingdoms"}
+                {activeSection === "wallet" && "Manage your cryptocurrency wallet addresses"}
+                {activeSection === "payments" && "View and create payment requests"}
+              </p>
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="gaming-gradient text-accent-foreground hover:opacity-90" data-testid="button-add-kingdom">
+            {activeSection === "kingdoms" && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="gaming-gradient text-accent-foreground hover:opacity-90" data-testid="button-add-kingdom">
+                    <i className="fas fa-plus mr-2"></i>
+                    Add Kingdom
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <KingdomCard />
+                </DialogContent>
+              </Dialog>
+            )}
+            {activeSection === "wallet" && (
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Enter wallet address"
+                  value={newWalletAddress}
+                  onChange={(e) => setNewWalletAddress(e.target.value)}
+                  className="w-64"
+                  data-testid="input-new-wallet"
+                />
+                <Button 
+                  onClick={() => {
+                    if (newWalletAddress.trim()) {
+                      addWalletMutation.mutate(newWalletAddress.trim());
+                    }
+                  }}
+                  disabled={addWalletMutation.isPending || !newWalletAddress.trim()}
+                  data-testid="button-add-wallet"
+                >
                   <i className="fas fa-plus mr-2"></i>
-                  Add Kingdom
+                  Add Wallet
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <KingdomCard />
-              </DialogContent>
-            </Dialog>
+              </div>
+            )}
           </div>
         </header>
         
         {/* Dashboard Content */}
         <main className="p-6 space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              title="Total Kingdoms"
-              value={kingdoms.length.toString()}
-              icon="fas fa-castle"
-              color="primary"
-            />
-            <StatCard
-              title="Weekly Contributions"
-              value={`$${weeklyContributions.toFixed(2)}`}
-              icon="fas fa-coins"
-              color="accent"
-            />
-            <StatCard
-              title="Pending Payments"
-              value={`$${pendingPayments.toFixed(2)}`}
-              icon="fas fa-clock"
-              color="destructive"
-            />
-            <StatCard
-              title="Total Earned"
-              value={`$${totalEarned.toFixed(2)}`}
-              icon="fas fa-trophy"
-              color="emerald"
-            />
-          </div>
+          {/* Dashboard Section */}
+          {activeSection === "dashboard" && (
+            <>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                  title="Total Kingdoms"
+                  value={(kingdoms as any[]).length.toString()}
+                  icon="fas fa-castle"
+                  color="primary"
+                />
+                <StatCard
+                  title="Weekly Contributions"
+                  value={`$${weeklyContributions.toFixed(2)}`}
+                  icon="fas fa-coins"
+                  color="accent"
+                />
+                <StatCard
+                  title="Pending Payments"
+                  value={`$${pendingPayments.toFixed(2)}`}
+                  icon="fas fa-clock"
+                  color="destructive"
+                />
+                <StatCard
+                  title="Total Earned"
+                  value={`$${totalEarned.toFixed(2)}`}
+                  icon="fas fa-trophy"
+                  color="emerald"
+                />
+              </div>
+            </>
+          )}
           
           {/* Kingdoms Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">

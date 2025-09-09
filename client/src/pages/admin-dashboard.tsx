@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatCard from "@/components/stat-card";
 import LandContributions from "@/components/land-contributions";
+import LandStats from "@/components/land-stats";
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -409,8 +410,9 @@ export default function AdminDashboard() {
             </Card>
           </div>
           
-          {/* Land Contributions Section */}
+          {/* Land Analytics Section */}
           <div className="space-y-6">
+            <LandStats />
             <LandContributions isAdmin={true} />
           </div>
         </main>

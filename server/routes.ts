@@ -243,15 +243,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Land contributions routes
   app.get('/api/admin/land-contributions', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
+      const { period = 'currentWeek', customDays, continent, landId } = req.query;
+      let result = await getAllUsersContributions(
+        period as string, 
+        customDays ? parseInt(customDays as string) : undefined
+      );
+      
+      // Filter by continent if specified
+      if (continent && continent !== 'all') {
+        result.data = result.data.filter(item => item.continent === parseInt(continent as string));
+      }
+      
+      // Filter by land ID if specified
+      if (landId && landId !== 'all') {
+        result.data = result.data.filter(item => item.landId === landId);
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching land contributions:", error);
+      res.status(500).json({ message: "Failed to fetch land contributions" });
+    }
+  });
+
+  // Get aggregated stats by continent and land
+  app.get('/api/admin/land-stats', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
       const { period = 'currentWeek', customDays } = req.query;
       const result = await getAllUsersContributions(
         period as string, 
         customDays ? parseInt(customDays as string) : undefined
       );
-      res.json(result);
+      
+      // Aggregate by continent
+      const continentStats = result.data.reduce((acc: any, item) => {
+        if (!acc[item.continent]) {
+          acc[item.continent] = { total: 0, kingdoms: new Set() };
+        }
+        acc[item.continent].total += item.total;
+        acc[item.continent].kingdoms.add(item.kingdomId);
+        return acc;
+      }, {});
+      
+      // Aggregate by land
+      const landStats = result.data.reduce((acc: any, item) => {
+        if (!acc[item.landId || 'unknown']) {
+          acc[item.landId || 'unknown'] = { total: 0, kingdoms: new Set(), continents: new Set() };
+        }
+        acc[item.landId || 'unknown'].total += item.total;
+        acc[item.landId || 'unknown'].kingdoms.add(item.kingdomId);
+        acc[item.landId || 'unknown'].continents.add(item.continent);
+        return acc;
+      }, {});
+      
+      // Convert Sets to counts
+      Object.keys(continentStats).forEach(key => {
+        continentStats[key].kingdomCount = continentStats[key].kingdoms.size;
+        delete continentStats[key].kingdoms;
+      });
+      
+      Object.keys(landStats).forEach(key => {
+        landStats[key].kingdomCount = landStats[key].kingdoms.size;
+        landStats[key].continentCount = landStats[key].continents.size;
+        delete landStats[key].kingdoms;
+        delete landStats[key].continents;
+      });
+      
+      res.json({
+        from: result.from,
+        to: result.to,
+        continentStats,
+        landStats,
+        totalContributions: result.data.reduce((sum, item) => sum + item.total, 0),
+        totalKingdoms: new Set(result.data.map(item => item.kingdomId)).size
+      });
     } catch (error) {
-      console.error("Error fetching land contributions:", error);
-      res.status(500).json({ message: "Failed to fetch land contributions" });
+      console.error("Error fetching land stats:", error);
+      res.status(500).json({ message: "Failed to fetch land stats" });
     }
   });
 

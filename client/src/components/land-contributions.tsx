@@ -9,7 +9,10 @@ import { Label } from "@/components/ui/label";
 interface LandContribution {
   kingdomId: string;
   total: number;
+  name: string;
+  continent: number;
   date: string;
+  landId?: string;
 }
 
 interface ContributionResult {
@@ -25,15 +28,23 @@ interface LandContributionsProps {
 export default function LandContributions({ isAdmin }: LandContributionsProps) {
   const [selectedPeriod, setSelectedPeriod] = useState("currentWeek");
   const [customDays, setCustomDays] = useState("");
+  const [selectedContinent, setSelectedContinent] = useState("all");
+  const [selectedLand, setSelectedLand] = useState("all");
 
   const endpoint = isAdmin ? "/api/admin/land-contributions" : "/api/user/land-contributions";
 
   const { data: contributionsData, isLoading, error } = useQuery<ContributionResult>({
-    queryKey: [endpoint, selectedPeriod, customDays],
+    queryKey: [endpoint, selectedPeriod, customDays, selectedContinent, selectedLand],
     queryFn: async () => {
       let url = `${endpoint}?period=${selectedPeriod}`;
       if (selectedPeriod === 'customDays' && customDays) {
         url += `&customDays=${customDays}`;
+      }
+      if (isAdmin && selectedContinent !== 'all') {
+        url += `&continent=${selectedContinent}`;
+      }
+      if (isAdmin && selectedLand !== 'all') {
+        url += `&landId=${selectedLand}`;
       }
       const response = await fetch(url);
       if (!response.ok) {
@@ -43,6 +54,10 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
     },
     enabled: selectedPeriod !== 'customDays' || (selectedPeriod === 'customDays' && customDays !== ''),
   });
+
+  // Get unique continents and lands for filters
+  const availableContinents = [...new Set(contributionsData?.data.map(item => item.continent) || [])].sort((a, b) => a - b);
+  const availableLands = [...new Set(contributionsData?.data.map(item => item.landId).filter(Boolean) || [])].sort();
 
   // Aggregate contributions by kingdom ID for display
   const aggregatedContributions = contributionsData?.data.reduce((acc, contribution) => {
@@ -68,7 +83,7 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
             <i className="fas fa-chart-line text-accent"></i>
             <span>Land Contributions</span>
           </CardTitle>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-wrap gap-2">
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
               <SelectTrigger className="w-40" data-testid="select-period">
                 <SelectValue placeholder="Select period" />
@@ -83,6 +98,38 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
                 <SelectItem value="customDays">Custom Days</SelectItem>
               </SelectContent>
             </Select>
+            
+            {isAdmin && (
+              <>
+                <Select value={selectedContinent} onValueChange={setSelectedContinent}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Continent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Continents</SelectItem>
+                    {availableContinents.map(continent => (
+                      <SelectItem key={continent} value={continent.toString()}>
+                        Continent {continent}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={selectedLand} onValueChange={setSelectedLand}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Land" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Lands</SelectItem>
+                    {availableLands.map(landId => (
+                      <SelectItem key={landId} value={landId!}>
+                        Land {landId}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
             {selectedPeriod === 'customDays' && (
               <div className="flex items-center space-x-2">
                 <Label htmlFor="customDays" className="text-sm">Days:</Label>
@@ -169,9 +216,10 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
                           <span className="text-xs font-bold text-accent">#{index + 1}</span>
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">Kingdom {contribution.kingdomId}</p>
+                          <p className="font-medium text-foreground">{contribution.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            Period: {contributionsData.from} - {contributionsData.to}
+                            ID: {contribution.kingdomId} • Continent: {contribution.continent}
+                            {contribution.landId && ` • Land: ${contribution.landId}`}
                           </p>
                         </div>
                       </div>
@@ -202,7 +250,8 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
                         </span>
                         <span className="text-xs text-muted-foreground">Kingdom</span>
                       </div>
-                      <p className="font-bold text-foreground">ID: {contribution.kingdomId}</p>
+                      <p className="font-bold text-foreground">{contribution.name}</p>
+                      <p className="text-xs text-muted-foreground">ID: {contribution.kingdomId}</p>
                       <p className="text-sm text-accent font-semibold">
                         {contribution.total.toLocaleString()} contributions
                       </p>

@@ -130,7 +130,13 @@ export default function UserDashboard() {
                 <p className="text-xs text-muted-foreground">User</p>
               </div>
               <button 
-                onClick={() => window.location.href = '/api/logout'} 
+                onClick={() => {
+                  fetch('/api/logout', { method: 'POST' })
+                    .then(() => {
+                      queryClient.setQueryData(['/api/auth/user'], null);
+                      window.location.reload();
+                    });
+                }} 
                 className="text-muted-foreground hover:text-foreground"
                 data-testid="button-logout"
               >

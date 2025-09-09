@@ -10,6 +10,7 @@ import StatCard from "@/components/stat-card";
 import LandContributions from "@/components/land-contributions";
 import LandStats from "@/components/land-stats";
 import AdminLandDashboard from "@/components/admin-land-dashboard";
+import AdminPaymentSettings from "@/components/admin-payment-settings";
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -243,6 +244,18 @@ export default function AdminDashboard() {
               <span>Analytics</span>
             </button>
             <button 
+              onClick={() => setActiveSection("payment-settings")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "payment-settings" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-payment-settings"
+            >
+              <i className="fas fa-money-bill-wave"></i>
+              <span>Payment Settings</span>
+            </button>
+            <button 
               onClick={() => setActiveSection("settings")}
               className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
                 activeSection === "settings" 
@@ -307,6 +320,7 @@ export default function AdminDashboard() {
                 {activeSection === "payments" && "Payment Requests"}
                 {activeSection === "contributions" && "Land Contributions"}
                 {activeSection === "analytics" && "Analytics Dashboard"}
+                {activeSection === "payment-settings" && "Payment Settings"}
                 {activeSection === "settings" && "System Settings"}
               </h1>
               <p className="text-muted-foreground">
@@ -316,6 +330,7 @@ export default function AdminDashboard() {
                 {activeSection === "payments" && "Process payment requests and payouts"}
                 {activeSection === "contributions" && "Monitor land contribution data from League of Kingdoms"}
                 {activeSection === "analytics" && "View detailed analytics and reporting"}
+                {activeSection === "payment-settings" && "Configure payout rates and payment rules"}
                 {activeSection === "settings" && "Configure system settings and preferences"}
               </p>
             </div>
@@ -529,6 +544,10 @@ export default function AdminDashboard() {
                 </p>
               </CardContent>
             </Card>
+          )}
+
+          {activeSection === "payment-settings" && (
+            <AdminPaymentSettings />
           )}
 
           {activeSection === "settings" && (

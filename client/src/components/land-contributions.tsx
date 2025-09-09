@@ -56,8 +56,8 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
   });
 
   // Get unique continents and lands for filters
-  const availableContinents = [...new Set(contributionsData?.data.map(item => item.continent) || [])].sort((a, b) => a - b);
-  const availableLands = [...new Set(contributionsData?.data.map(item => item.landId).filter(Boolean) || [])].sort();
+  const availableContinents = Array.from(new Set(contributionsData?.data.map(item => item.continent) || [])).sort((a, b) => a - b);
+  const availableLands = Array.from(new Set(contributionsData?.data.map(item => item.landId).filter(Boolean) || [])).sort();
 
   // Aggregate contributions by kingdom ID for display
   const aggregatedContributions = contributionsData?.data.reduce((acc, contribution) => {

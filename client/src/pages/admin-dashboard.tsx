@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatCard from "@/components/stat-card";
 import LandContributions from "@/components/land-contributions";
 import LandStats from "@/components/land-stats";
+import AdminLandDashboard from "@/components/admin-land-dashboard";
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -32,17 +33,17 @@ export default function AdminDashboard() {
 
   const { data: stats } = useQuery({
     queryKey: ["/api/admin/stats"],
-    enabled: isAuthenticated && user?.isAdmin,
+    enabled: isAuthenticated && (user as any)?.isAdmin,
   });
 
   const { data: pendingUsers = [] } = useQuery({
     queryKey: ["/api/admin/pending-users"],
-    enabled: isAuthenticated && user?.isAdmin,
+    enabled: isAuthenticated && (user as any)?.isAdmin,
   });
 
   const { data: pendingPayments = [] } = useQuery({
     queryKey: ["/api/admin/pending-payments"],
-    enabled: isAuthenticated && user?.isAdmin,
+    enabled: isAuthenticated && (user as any)?.isAdmin,
   });
 
   const approveUserMutation = useMutation({
@@ -122,7 +123,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!user?.isAdmin) {
+  if (!(user as any)?.isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -412,8 +413,7 @@ export default function AdminDashboard() {
           
           {/* Land Analytics Section */}
           <div className="space-y-6">
-            <LandStats />
-            <LandContributions isAdmin={true} />
+            <AdminLandDashboard />
           </div>
         </main>
       </div>

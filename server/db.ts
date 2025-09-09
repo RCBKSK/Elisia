@@ -5,8 +5,19 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-// Use local database for now due to Supabase connection issues
-const databaseUrl = process.env.DATABASE_URL;
+// Database connection logic with Supabase support
+let databaseUrl = process.env.DATABASE_URL;
+
+if (process.env.SUPABASE_DATABASE_URL) {
+  console.log("🔄 Using Supabase database for all user data storage");
+  databaseUrl = process.env.SUPABASE_DATABASE_URL;
+  
+  // Log connection attempt (without exposing credentials)
+  const maskedUrl = databaseUrl.replace(/:[^:@]*@/, ':***@');
+  console.log("📡 Connecting to:", maskedUrl);
+} else {
+  console.log("📊 Using local Replit database");
+}
 
 if (!databaseUrl) {
   throw new Error(

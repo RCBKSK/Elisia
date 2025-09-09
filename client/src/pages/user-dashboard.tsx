@@ -52,8 +52,9 @@ export default function UserDashboard() {
     enabled: isAuthenticated,
   });
 
-  // Add wallet mutation
   const [newWalletAddress, setNewWalletAddress] = useState("");
+
+  // Add wallet mutation
   const addWalletMutation = useMutation({
     mutationFn: (address: string) => 
       apiRequest("POST", "/api/wallets", { address, isPrimary: (wallets as any[]).length === 0 }),
@@ -384,20 +385,11 @@ export default function UserDashboard() {
                   color="emerald"
                 />
               </div>
-            </>
-          )}
-          
-          {/* Kingdoms Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {kingdoms.map((kingdom: any) => (
-              <KingdomCard key={kingdom.id} kingdom={kingdom} />
-            ))}
-          </div>
-          
-          {/* Recent Activity & Wallet Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Activity */}
-            <Card>
+              
+              {/* Recent Activity & Wallet Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Recent Activity */}
+                <Card>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
               </CardHeader>
@@ -479,12 +471,93 @@ export default function UserDashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-          
-          {/* Land Contributions Section */}
-          <div className="space-y-6">
-            <LandContributions isAdmin={false} />
-          </div>
+              </div>
+            </>
+          )}
+
+          {/* Kingdoms Section */}
+          {activeSection === "kingdoms" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {kingdoms.map((kingdom: any) => (
+                <KingdomCard key={kingdom.id} kingdom={kingdom} />
+              ))}
+            </div>
+          )}
+
+          {/* Contributions Section */}
+          {activeSection === "contributions" && (
+            <div className="space-y-6">
+              <LandContributions isAdmin={false} />
+            </div>
+          )}
+
+          {/* Wallet Section */}
+          {activeSection === "wallet" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {wallets.map((wallet: any) => (
+                <Card key={wallet.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-lg font-medium text-foreground">
+                        {wallet.isPrimary ? 'Primary Wallet' : 'Secondary Wallet'}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-sm ${
+                        wallet.isActive 
+                          ? 'bg-primary/20 text-primary' 
+                          : 'bg-muted-foreground/20 text-muted-foreground'
+                      }`}>
+                        {wallet.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground font-mono bg-muted/50 p-3 rounded">
+                      {wallet.address}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Payments Section */}
+          {activeSection === "payments" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment Requests</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {paymentRequests.map((request: any) => (
+                      <div key={request.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-foreground">${request.amount}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(request.requestedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-sm ${
+                          request.status === 'paid' 
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : request.status === 'pending'
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : 'bg-destructive/20 text-destructive'
+                        }`}>
+                          {request.status}
+                        </span>
+                      </div>
+                    ))}
+                    {paymentRequests.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8">
+                        No payment requests yet
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <PaymentRequestForm />
+            </div>
+          )}
         </main>
       </div>
     </div>

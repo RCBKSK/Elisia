@@ -5,8 +5,8 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-// Use Supabase database URL if available, otherwise fall back to DATABASE_URL
-const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+// Use local database for now due to Supabase connection issues
+const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(

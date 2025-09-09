@@ -10,7 +10,15 @@ import connectPg from "connect-pg-simple";
 
 declare global {
   namespace Express {
-    interface User extends User {}
+    interface User {
+      id: string;
+      username: string;
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      isAdmin?: boolean;
+      isApproved?: boolean;
+    }
   }
 }
 
@@ -33,7 +41,7 @@ export function setupAuth(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    conString: process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL,
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
@@ -71,13 +79,13 @@ export function setupAuth(app: Express) {
     }),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user: any, done) => done(null, user.id));
   passport.deserializeUser(async (id: string, done) => {
     try {
       if (!id) {
         return done(null, false);
       }
-      const user = await storage.getUserById(id);
+      const user = await storage.getUser(id);
       if (!user) {
         return done(null, false);
       }

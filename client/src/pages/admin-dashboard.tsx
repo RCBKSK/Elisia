@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatCard from "@/components/stat-card";
+import LandContributions from "@/components/land-contributions";
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -181,6 +182,10 @@ export default function AdminDashboard() {
                   {pendingPayments.length}
                 </span>
               )}
+            </a>
+            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+              <i className="fas fa-chart-line"></i>
+              <span>Land Contributions</span>
             </a>
             <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
               <i className="fas fa-chart-bar"></i>
@@ -402,6 +407,11 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+          
+          {/* Land Contributions Section */}
+          <div className="space-y-6">
+            <LandContributions isAdmin={true} />
           </div>
         </main>
       </div>

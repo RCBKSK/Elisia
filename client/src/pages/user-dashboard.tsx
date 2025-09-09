@@ -9,6 +9,7 @@ import KingdomCard from "@/components/kingdom-card";
 import StatCard from "@/components/stat-card";
 import ContributionForm from "@/components/contribution-form";
 import PaymentRequestForm from "@/components/payment-request-form";
+import LandContributions from "@/components/land-contributions";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 export default function UserDashboard() {
@@ -292,6 +293,11 @@ export default function UserDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+          
+          {/* Land Contributions Section */}
+          <div className="space-y-6">
+            <LandContributions isAdmin={false} />
           </div>
         </main>
       </div>

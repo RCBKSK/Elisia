@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [activeSection, setActiveSection] = useState("overview");
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -159,44 +160,100 @@ export default function AdminDashboard() {
           
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md bg-primary text-primary-foreground">
+            <button 
+              onClick={() => setActiveSection("overview")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "overview" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-overview"
+            >
               <i className="fas fa-tachometer-alt"></i>
               <span>Overview</span>
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("users")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "users" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-users"
+            >
               <i className="fas fa-users"></i>
               <span>User Management</span>
-              {pendingUsers.length > 0 && (
+              {(pendingUsers as any[]).length > 0 && (
                 <span className="ml-auto bg-destructive/20 text-destructive px-2 py-0.5 rounded-full text-xs">
-                  {pendingUsers.length}
+                  {(pendingUsers as any[]).length}
                 </span>
               )}
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("kingdoms")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "kingdoms" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-kingdoms"
+            >
               <i className="fas fa-castle"></i>
               <span>All Kingdoms</span>
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("payments")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "payments" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-payments"
+            >
               <i className="fas fa-money-bill-wave"></i>
               <span>Payment Requests</span>
-              {pendingPayments.length > 0 && (
+              {(pendingPayments as any[]).length > 0 && (
                 <span className="ml-auto bg-accent/20 text-accent px-2 py-0.5 rounded-full text-xs">
-                  {pendingPayments.length}
+                  {(pendingPayments as any[]).length}
                 </span>
               )}
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("contributions")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "contributions" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-contributions"
+            >
               <i className="fas fa-chart-line"></i>
               <span>Land Contributions</span>
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("analytics")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "analytics" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-analytics"
+            >
               <i className="fas fa-chart-bar"></i>
               <span>Analytics</span>
-            </a>
-            <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            </button>
+            <button 
+              onClick={() => setActiveSection("settings")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "settings" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-settings"
+            >
               <i className="fas fa-cog"></i>
               <span>Settings</span>
-            </a>
+            </button>
           </nav>
           
           {/* User Profile */}
@@ -237,8 +294,24 @@ export default function AdminDashboard() {
         <header className="bg-card border-b border-border p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Admin Overview</h1>
-              <p className="text-muted-foreground">Manage users, kingdoms, and payment requests</p>
+              <h1 className="text-2xl font-bold text-foreground">
+                {activeSection === "overview" && "Admin Overview"}
+                {activeSection === "users" && "User Management"}
+                {activeSection === "kingdoms" && "Kingdom Management"}
+                {activeSection === "payments" && "Payment Requests"}
+                {activeSection === "contributions" && "Land Contributions"}
+                {activeSection === "analytics" && "Analytics Dashboard"}
+                {activeSection === "settings" && "System Settings"}
+              </h1>
+              <p className="text-muted-foreground">
+                {activeSection === "overview" && "Manage users, kingdoms, and payment requests"}
+                {activeSection === "users" && "Review and approve user registrations"}
+                {activeSection === "kingdoms" && "View and manage all registered kingdoms"}
+                {activeSection === "payments" && "Process payment requests and payouts"}
+                {activeSection === "contributions" && "Monitor land contribution data from League of Kingdoms"}
+                {activeSection === "analytics" && "View detailed analytics and reporting"}
+                {activeSection === "settings" && "Configure system settings and preferences"}
+              </p>
             </div>
             <div className="flex space-x-3">
               <Button variant="secondary" data-testid="button-export-data">

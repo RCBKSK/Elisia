@@ -45,6 +45,7 @@ export const kingdoms = pgTable("kingdoms", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
+  lokKingdomId: varchar("lok_kingdom_id").unique(), // LOK API kingdom ID for fetching contributions
   level: integer("level").default(1),
   imageUrl: varchar("image_url"),
   status: varchar("status").default("active"), // active, developing, inactive

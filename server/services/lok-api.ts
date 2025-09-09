@@ -1,14 +1,17 @@
 import fetch from 'node-fetch';
 
-// Land IDs from the provided configuration
+// Land IDs from Elisia Land Program configuration
 const ALL_LAND_IDS = [
-  "140578", "140322", "140066", "140320", "140064"
+  "134378", "135682", "145933", "134152", "137752"
 ];
 
 export interface LokContribution {
   kingdomId: string;
   total: number;
+  name: string;
+  continent: number;
   date: string; // Start date of the 7-day period
+  landId?: string; // Land ID this contribution came from
 }
 
 export interface DateRange {
@@ -114,7 +117,10 @@ async function getLokContributionData(overallFromDateUTC: Date, overallToDateUTC
                   allContributions.push({
                     kingdomId: String(item.kingdomId),
                     total: item.total,
-                    date: item.date
+                    name: String(item.name || "Unknown Kingdom"),
+                    continent: Number(item.continent || 0),
+                    date: item.date,
+                    landId: landId
                   });
                   validItemsInChunk++;
                 } else {

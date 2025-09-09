@@ -16,6 +16,7 @@ import ContributionForm from "./contribution-form";
 
 const kingdomSchema = z.object({
   name: z.string().min(1, "Kingdom name is required"),
+  lokKingdomId: z.string().optional(),
   level: z.number().min(1).max(100),
   imageUrl: z.string().url().optional().or(z.literal("")),
   status: z.enum(["active", "developing", "inactive"]),
@@ -36,6 +37,7 @@ export default function KingdomCard({ kingdom }: KingdomCardProps) {
     resolver: zodResolver(kingdomSchema),
     defaultValues: {
       name: kingdom?.name || "",
+      lokKingdomId: kingdom?.lokKingdomId || "",
       level: kingdom?.level || 1,
       imageUrl: kingdom?.imageUrl || "",
       status: kingdom?.status || "active",
@@ -128,6 +130,23 @@ export default function KingdomCard({ kingdom }: KingdomCardProps) {
                       <Input placeholder="Enter kingdom name" {...field} data-testid="input-kingdom-name" />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="lokKingdomId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>LOK Kingdom ID (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 61936d3b80e0c82c776a9d1a" {...field} data-testid="input-lok-kingdom-id" />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-xs text-muted-foreground">
+                      Enter your League of Kingdoms game ID to track contributions from the API
+                    </p>
                   </FormItem>
                 )}
               />
@@ -239,6 +258,9 @@ export default function KingdomCard({ kingdom }: KingdomCardProps) {
                 {kingdom.name}
               </h3>
               <p className="text-sm text-muted-foreground">Level {kingdom.level}</p>
+              {kingdom.lokKingdomId && (
+                <p className="text-xs text-muted-foreground">LOK ID: {kingdom.lokKingdomId}</p>
+              )}
             </div>
           </div>
           <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(kingdom.status)}`}>

@@ -328,12 +328,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const { period = 'currentWeek', customDays } = req.query;
       
-      // Get user's kingdoms first
+      // Get user's kingdoms with LOK kingdom IDs
       const kingdoms = await storage.getUserKingdoms(userId);
-      const kingdomIds = kingdoms.map((k: any) => k.name); // Using name as kingdom ID for now
+      const lokKingdomIds = kingdoms
+        .filter((k: any) => k.lokKingdomId) // Only kingdoms with LOK IDs
+        .map((k: any) => k.lokKingdomId);
+      
+      if (lokKingdomIds.length === 0) {
+        return res.json({
+          data: [],
+          from: new Date().toISOString().split('T')[0],
+          to: new Date().toISOString().split('T')[0]
+        });
+      }
       
       const result = await getContributionsForKingdoms(
-        kingdomIds,
+        lokKingdomIds,
         period as string,
         customDays ? parseInt(customDays as string) : undefined
       );

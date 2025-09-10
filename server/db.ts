@@ -1,34 +1,25 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
-
-// Database connection logic with Supabase support
-let databaseUrl = process.env.DATABASE_URL;
-
-if (process.env.SUPABASE_DATABASE_URL) {
-  console.log("🔄 Using Supabase database for all user data storage");
-  databaseUrl = process.env.SUPABASE_DATABASE_URL;
-  
-  // Log connection attempt (without exposing credentials)
-  const maskedUrl = databaseUrl.replace(/:[^:@]*@/, ':***@');
-  console.log("📡 Connecting to:", maskedUrl);
-} else {
-  console.log("📊 Using local Replit database");
-}
+// Enforce Supabase-only database configuration
+const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(
-    "SUPABASE_DATABASE_URL or DATABASE_URL must be set. Did you forget to provision a database?",
+    "DATABASE_URL must be set. This project exclusively uses Supabase for data storage.",
   );
 }
 
-// Configure SSL for Supabase/Replit environment
+console.log("🔄 Using Supabase database for all user data storage");
+// Log connection attempt (without exposing credentials)
+const maskedUrl = databaseUrl.replace(/:[^:@]*@/, ':***@');
+console.log("📡 Connecting to:", maskedUrl);
+
+// Configure standard PostgreSQL connection for Supabase
 const connectionString = databaseUrl;
 export const pool = new Pool({ 
   connectionString,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: { rejectUnauthorized: false } // Supabase requires SSL
 });
-export const db = drizzle({ client: pool, schema });
+export const db = drizzle(pool, { schema });

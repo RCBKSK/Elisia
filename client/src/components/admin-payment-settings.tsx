@@ -16,7 +16,10 @@ export default function AdminPaymentSettings() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    payoutRatePerPoint: "",
+    payoutFor1000Points: "",
+    payoutFor5000Points: "",
+    payoutFor8000Points: "",
+    payoutFor10000Points: "",
     minimumPayout: "",
     payoutFrequency: "monthly"
   });
@@ -53,13 +56,19 @@ export default function AdminPaymentSettings() {
   const handleEdit = () => {
     if (currentSettings) {
       setFormData({
-        payoutRatePerPoint: currentSettings.payoutRatePerPoint || "",
+        payoutFor1000Points: currentSettings.payoutFor1000Points || "",
+        payoutFor5000Points: currentSettings.payoutFor5000Points || "",
+        payoutFor8000Points: currentSettings.payoutFor8000Points || "",
+        payoutFor10000Points: currentSettings.payoutFor10000Points || "",
         minimumPayout: currentSettings.minimumPayout || "",
         payoutFrequency: currentSettings.payoutFrequency || "monthly"
       });
     } else {
       setFormData({
-        payoutRatePerPoint: "",
+        payoutFor1000Points: "",
+        payoutFor5000Points: "",
+        payoutFor8000Points: "",
+        payoutFor10000Points: "",
         minimumPayout: "10.00",
         payoutFrequency: "monthly"
       });
@@ -69,7 +78,10 @@ export default function AdminPaymentSettings() {
 
   const handleSave = () => {
     const data = {
-      payoutRatePerPoint: parseFloat(formData.payoutRatePerPoint),
+      payoutFor1000Points: parseFloat(formData.payoutFor1000Points),
+      payoutFor5000Points: parseFloat(formData.payoutFor5000Points),
+      payoutFor8000Points: parseFloat(formData.payoutFor8000Points),
+      payoutFor10000Points: parseFloat(formData.payoutFor10000Points),
       minimumPayout: parseFloat(formData.minimumPayout),
       payoutFrequency: formData.payoutFrequency,
       isActive: true
@@ -85,7 +97,10 @@ export default function AdminPaymentSettings() {
   const handleCancel = () => {
     setIsEditing(false);
     setFormData({
-      payoutRatePerPoint: "",
+      payoutFor1000Points: "",
+      payoutFor5000Points: "",
+      payoutFor8000Points: "",
+      payoutFor10000Points: "",
       minimumPayout: "",
       payoutFrequency: "monthly"
     });
@@ -117,7 +132,7 @@ export default function AdminPaymentSettings() {
           Payment Settings
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Configure how much users get paid for their contribution points
+          Configure payment amounts for different point achievement tiers
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -125,14 +140,46 @@ export default function AdminPaymentSettings() {
           <>
             {currentSettings ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                    <div>
-                      <p className="text-sm font-medium">Rate per Point</p>
-                      <p className="text-lg font-bold" data-testid="rate-per-point">
-                        ${parseFloat(currentSettings.payoutRatePerPoint || "0").toFixed(4)}
-                      </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <h3 className="text-lg font-semibold mb-3">Point-Based Payment Tiers</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <div>
+                          <p className="text-xs font-medium">1,000 Points</p>
+                          <p className="text-sm font-bold" data-testid="payout-1000-points">
+                            ${parseFloat(currentSettings.payoutFor1000Points || "0").toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+                        <DollarSign className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <p className="text-xs font-medium">5,000 Points</p>
+                          <p className="text-sm font-bold" data-testid="payout-5000-points">
+                            ${parseFloat(currentSettings.payoutFor5000Points || "0").toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+                        <DollarSign className="h-4 w-4 text-orange-600" />
+                        <div>
+                          <p className="text-xs font-medium">8,000 Points</p>
+                          <p className="text-sm font-bold" data-testid="payout-8000-points">
+                            ${parseFloat(currentSettings.payoutFor8000Points || "0").toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+                        <DollarSign className="h-4 w-4 text-purple-600" />
+                        <div>
+                          <p className="text-xs font-medium">10,000 Points</p>
+                          <p className="text-sm font-bold" data-testid="payout-10000-points">
+                            ${parseFloat(currentSettings.payoutFor10000Points || "0").toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -181,22 +228,61 @@ export default function AdminPaymentSettings() {
           </>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="payoutRatePerPoint">Rate per Contribution Point ($)</Label>
-                <Input
-                  id="payoutRatePerPoint"
-                  type="number"
-                  step="0.0001"
-                  min="0"
-                  placeholder="0.0500"
-                  value={formData.payoutRatePerPoint}
-                  onChange={(e) => setFormData(prev => ({ ...prev, payoutRatePerPoint: e.target.value }))}
-                  data-testid="input-rate-per-point"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Amount in USD paid per contribution point
-                </p>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Point-Based Payment Tiers</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="payoutFor1000Points">Payment for 1,000 Points ($)</Label>
+                  <Input
+                    id="payoutFor1000Points"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="50.00"
+                    value={formData.payoutFor1000Points}
+                    onChange={(e) => setFormData(prev => ({ ...prev, payoutFor1000Points: e.target.value }))}
+                    data-testid="input-1000-points"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payoutFor5000Points">Payment for 5,000 Points ($)</Label>
+                  <Input
+                    id="payoutFor5000Points"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="250.00"
+                    value={formData.payoutFor5000Points}
+                    onChange={(e) => setFormData(prev => ({ ...prev, payoutFor5000Points: e.target.value }))}
+                    data-testid="input-5000-points"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payoutFor8000Points">Payment for 8,000 Points ($)</Label>
+                  <Input
+                    id="payoutFor8000Points"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="400.00"
+                    value={formData.payoutFor8000Points}
+                    onChange={(e) => setFormData(prev => ({ ...prev, payoutFor8000Points: e.target.value }))}
+                    data-testid="input-8000-points"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payoutFor10000Points">Payment for 10,000 Points ($)</Label>
+                  <Input
+                    id="payoutFor10000Points"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="500.00"
+                    value={formData.payoutFor10000Points}
+                    onChange={(e) => setFormData(prev => ({ ...prev, payoutFor10000Points: e.target.value }))}
+                    data-testid="input-10000-points"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="minimumPayout">Minimum Payout Amount ($)</Label>
@@ -242,7 +328,7 @@ export default function AdminPaymentSettings() {
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={!formData.payoutRatePerPoint || !formData.minimumPayout || createSettingsMutation.isPending || updateSettingsMutation.isPending}
+                disabled={!formData.payoutFor1000Points || !formData.minimumPayout || createSettingsMutation.isPending || updateSettingsMutation.isPending}
                 data-testid="button-save-settings"
               >
                 {createSettingsMutation.isPending || updateSettingsMutation.isPending ? "Saving..." : "Save Settings"}

@@ -69,7 +69,11 @@ export const contributions = pgTable("contributions", {
 // Payment settings table (admin configurable)
 export const paymentSettings = pgTable("payment_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  payoutRatePerPoint: decimal("payout_rate_per_point", { precision: 10, scale: 4 }).notNull(), // Amount per contribution point
+  payoutRatePerPoint: decimal("payout_rate_per_point", { precision: 10, scale: 4 }), // Legacy: Amount per contribution point
+  payoutFor1000Points: decimal("payout_for_1000_points", { precision: 10, scale: 2 }), // Payment for 1,000 points
+  payoutFor5000Points: decimal("payout_for_5000_points", { precision: 10, scale: 2 }), // Payment for 5,000 points
+  payoutFor8000Points: decimal("payout_for_8000_points", { precision: 10, scale: 2 }), // Payment for 8,000 points
+  payoutFor10000Points: decimal("payout_for_10000_points", { precision: 10, scale: 2 }), // Payment for 10,000 points
   minimumPayout: decimal("minimum_payout", { precision: 10, scale: 2 }).default("10.00"), // Minimum amount for payout
   payoutFrequency: varchar("payout_frequency").default("monthly"), // weekly, biweekly, monthly
   isActive: boolean("is_active").default(true),

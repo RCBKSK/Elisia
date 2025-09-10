@@ -28,6 +28,8 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: Centralized error handling with proper HTTP status codes
 
 ### Database Design
+**IMPORTANT: This project exclusively uses Supabase PostgreSQL database - NEVER use Replit database**
+
 - **Users Table**: Stores user profiles with approval status and admin flags
 - **Kingdoms Table**: User-owned kingdoms with levels, status, and contribution tracking
 - **Contributions Table**: Periodic contributions linked to kingdoms
@@ -52,8 +54,9 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Database
-- **Neon Database**: Serverless PostgreSQL database hosting
+- **Supabase**: Primary PostgreSQL database - ALL data stored here exclusively
 - **Connection Pooling**: @neondatabase/serverless for optimized connections
+- **Configuration**: Always use SUPABASE_DATABASE_URL environment variable
 
 ### Authentication
 - **Replit Auth**: OpenID Connect integration for user authentication

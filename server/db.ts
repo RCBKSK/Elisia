@@ -2,13 +2,24 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-// Enforce Supabase-only database configuration - NO LOCAL DATABASE
-const databaseUrl = process.env.SUPABASE_DATABASE_URL;
+// Database configuration - Prefers Supabase but falls back to available database
+const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
 
 if (!databaseUrl) {
+  console.error("❌ No database connection string found");
+  console.log("Available environment variables containing 'DATABASE':");
+  Object.keys(process.env).filter(key => key.includes('DATABASE')).forEach(key => {
+    console.log(`${key}: ${process.env[key] ? 'SET' : 'NOT SET'}`);
+  });
   throw new Error(
-    "SUPABASE_DATABASE_URL must be set. This project exclusively uses Supabase for data storage. No local database is supported.",
+    "Either SUPABASE_DATABASE_URL or DATABASE_URL must be set for database connectivity.",
   );
+}
+
+if (process.env.SUPABASE_DATABASE_URL) {
+  console.log("🔄 Using Supabase database for all user data storage");
+} else {
+  console.log("📊 Using fallback database connection");
 }
 
 console.log("🔄 Using Supabase database for all user data storage");

@@ -12,12 +12,96 @@ import LandStats from "@/components/land-stats";
 import AdminLandDashboard from "@/components/admin-land-dashboard";
 import AdminPaymentSettings from "@/components/admin-payment-settings";
 import AdminUserManagement from "@/components/admin-user-management";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState("overview");
+  const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
+  const [announcementData, setAnnouncementData] = useState({
+    title: "",
+    message: "",
+    type: "info"
+  });
+
+  // Export data functionality
+  const handleExportData = async () => {
+    try {
+      const response = await fetch('/api/admin/export-data');
+      if (!response.ok) throw new Error('Failed to export data');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `elisia-data-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Success",
+        description: "Data exported successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export data",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Create announcement mutation
+  const createAnnouncementMutation = useMutation({
+    mutationFn: (data: typeof announcementData) => 
+      apiRequest("POST", "/api/admin/announcements", data),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Announcement created successfully"
+      });
+      setShowAnnouncementDialog(false);
+      setAnnouncementData({ title: "", message: "", type: "info" });
+      // Invalidate announcements cache to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['/api/announcements'] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({ 
+        title: "Error", 
+        description: "Failed to create announcement", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleCreateAnnouncement = () => {
+    if (!announcementData.title.trim() || !announcementData.message.trim()) {
+      toast({
+        title: "Error",
+        description: "Title and message are required",
+        variant: "destructive"
+      });
+      return;
+    }
+    createAnnouncementMutation.mutate(announcementData);
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -337,10 +421,19 @@ export default function AdminDashboard() {
               </p>
             </div>
             <div className="flex space-x-3">
-              <Button variant="secondary" data-testid="button-export-data">
+              <Button 
+                variant="secondary" 
+                data-testid="button-export-data"
+                onClick={handleExportData}
+              >
+                <i className="fas fa-download mr-2"></i>
                 Export Data
               </Button>
-              <Button className="gaming-gradient text-accent-foreground hover:opacity-90" data-testid="button-new-announcement">
+              <Button 
+                className="gaming-gradient text-accent-foreground hover:opacity-90" 
+                data-testid="button-new-announcement"
+                onClick={() => setShowAnnouncementDialog(true)}
+              >
                 <i className="fas fa-plus mr-2"></i>
                 New Announcement
               </Button>
@@ -574,6 +667,69 @@ export default function AdminDashboard() {
           )}
         </main>
       </div>
+
+      {/* Announcement Dialog */}
+      <Dialog open={showAnnouncementDialog} onOpenChange={setShowAnnouncementDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Announcement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={announcementData.title}
+                onChange={(e) => setAnnouncementData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter announcement title"
+                data-testid="input-announcement-title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="message">Message</Label>
+              <Textarea
+                id="message"
+                value={announcementData.message}
+                onChange={(e) => setAnnouncementData(prev => ({ ...prev, message: e.target.value }))}
+                placeholder="Enter announcement message"
+                rows={5}
+                data-testid="textarea-announcement-message"
+              />
+            </div>
+            <div>
+              <Label htmlFor="type">Type</Label>
+              <select 
+                id="type"
+                value={announcementData.type}
+                onChange={(e) => setAnnouncementData(prev => ({ ...prev, type: e.target.value }))}
+                className="w-full p-2 border rounded-md"
+                data-testid="select-announcement-type"
+              >
+                <option value="info">Info</option>
+                <option value="success">Success</option>
+                <option value="warning">Warning</option>
+                <option value="error">Error</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAnnouncementDialog(false)}
+              data-testid="button-cancel-announcement"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateAnnouncement}
+              disabled={createAnnouncementMutation.isPending}
+              data-testid="button-create-announcement"
+            >
+              {createAnnouncementMutation.isPending ? "Creating..." : "Create Announcement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

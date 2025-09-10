@@ -8,6 +8,7 @@ import {
   payouts,
   userPayoutSummary,
   dragoRentalRequests,
+  announcements,
   type User,
   type UpsertUser,
   type LoginData,
@@ -28,6 +29,8 @@ import {
   type InsertUserPayoutSummary,
   type DragoRentalRequest,
   type InsertDragoRentalRequest,
+  type Announcement,
+  type InsertAnnouncement,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -66,6 +69,7 @@ export interface IStorage {
   getUserPaymentRequests(userId: string): Promise<PaymentRequest[]>;
   createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
   getPendingPaymentRequests(): Promise<PaymentRequest[]>;
+  getAllPaymentRequests(): Promise<PaymentRequest[]>;
   updatePaymentRequestStatus(id: string, status: string, adminNotes?: string, processedBy?: string): Promise<PaymentRequest>;
   
   // Payment settings operations
@@ -91,6 +95,10 @@ export interface IStorage {
   getPendingDragoRentalRequests(): Promise<DragoRentalRequest[]>;
   updateDragoRentalRequestStatus(id: string, status: string, adminNotes?: string, processedBy?: string, rentalStartDate?: Date, rentalEndDate?: Date): Promise<DragoRentalRequest>;
   
+  // Announcement operations
+  createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
+  getActiveAnnouncements(): Promise<Announcement[]>;
+
   // Admin operations
   getSystemStats(): Promise<{
     totalUsers: number;
@@ -547,6 +555,36 @@ export class DatabaseStorage implements IStorage {
       pendingApprovals: pendingUsersCount.count + pendingPaymentsCount.count,
       totalPayouts: totalPayouts.total || "0",
     };
+  }
+
+  // Additional payment request operations
+  async getAllPaymentRequests(): Promise<PaymentRequest[]> {
+    return db
+      .select()
+      .from(paymentRequests)
+      .orderBy(desc(paymentRequests.requestedAt));
+  }
+
+  // Announcement operations
+  async createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement> {
+    const [newAnnouncement] = await db
+      .insert(announcements)
+      .values({
+        title: announcement.title,
+        message: announcement.message,
+        type: announcement.type,
+        createdBy: announcement.createdBy,
+      })
+      .returning();
+    return newAnnouncement;
+  }
+
+  async getActiveAnnouncements(): Promise<Announcement[]> {
+    return db
+      .select()
+      .from(announcements)
+      .where(eq(announcements.isActive, true))
+      .orderBy(desc(announcements.createdAt));
   }
 }
 

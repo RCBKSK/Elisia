@@ -173,6 +173,18 @@ export const dragoRentalRequests = pgTable("drago_rental_requests", {
   rentalEndDate: timestamp("rental_end_date"),
 });
 
+// Announcements table
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  type: varchar("type").default("info"), // info, success, warning, error
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   kingdoms: many(kingdoms),
@@ -338,6 +350,14 @@ export const insertDragoRentalRequestSchema = createInsertSchema(dragoRentalRequ
   processedBy: true,
 });
 
+export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  type: z.enum(["info", "success", "warning", "error"]).default("info"),
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -359,3 +379,5 @@ export type UserPayoutSummary = typeof userPayoutSummary.$inferSelect;
 export type InsertUserPayoutSummary = z.infer<typeof insertUserPayoutSummarySchema>;
 export type DragoRentalRequest = typeof dragoRentalRequests.$inferSelect;
 export type InsertDragoRentalRequest = z.infer<typeof insertDragoRentalRequestSchema>;
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;

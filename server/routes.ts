@@ -10,6 +10,7 @@ import {
   insertPaymentSettingsSchema,
   insertPayoutSchema,
   insertDragoRentalRequestSchema,
+  insertAnnouncementSchema,
   loginSchema,
   registerSchema 
 } from "@shared/schema";
@@ -562,6 +563,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user land contributions:", error);
       res.status(500).json({ message: "Failed to fetch land contributions" });
+    }
+  });
+
+  // Secure CSV escaping function with RFC4180 compliance and CSV injection prevention
+  function escapeCSVField(value: any): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    
+    let stringValue = String(value);
+    
+    // CSV Injection Prevention: Neutralize formula characters
+    if (stringValue.length > 0 && /^[=+\-@]/.test(stringValue)) {
+      stringValue = "'" + stringValue; // Prefix with apostrophe to neutralize formula
+    }
+    
+    // RFC4180 Compliance: Escape fields containing special characters
+    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
+      // Escape internal double quotes by doubling them
+      stringValue = stringValue.replace(/"/g, '""');
+      // Wrap the entire field in double quotes
+      return `"${stringValue}"`;
+    }
+    
+    return stringValue;
+  }
+
+  // Generate secure CSV row from array of values
+  function generateCSVRow(values: any[]): string {
+    return values.map(escapeCSVField).join(',') + '\n';
+  }
+
+  // Export data endpoint for admin
+  app.get('/api/admin/export-data', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      // Get all data for export
+      const usersWithDetails = await storage.getAllUsersWithDetails();
+      const paymentRequests = await storage.getAllPaymentRequests();
+      
+      // Create a map of user IDs to user data for payment requests
+      const userMap = new Map();
+      for (const row of usersWithDetails) {
+        userMap.set(row.user.id, row.user);
+      }
+      
+      // UTF-8 BOM for Excel compatibility
+      let csvContent = '\uFEFF';
+      
+      // Users section
+      csvContent += 'USERS DATA\n';
+      csvContent += generateCSVRow([
+        'ID', 'Email', 'First Name', 'Last Name', 'Status', 
+        'Created At', 'Total Kingdoms', 'Total Contributions'
+      ]);
+      
+      for (const row of usersWithDetails) {
+        // Calculate total contributions from all kingdoms
+        const totalContributions = (row.kingdoms || []).reduce((sum: number, kingdom: any) => {
+          return sum + (parseFloat(kingdom.totalContributions || '0'));
+        }, 0);
+        
+        csvContent += generateCSVRow([
+          row.user.id,
+          row.user.email,
+          row.user.firstName || '',
+          row.user.lastName || '',
+          row.user.isApproved ? 'Approved' : 'Pending',
+          row.user.createdAt,
+          row.kingdoms?.length || 0,
+          totalContributions
+        ]);
+      }
+      
+      csvContent += '\n\nPAYMENT REQUESTS DATA\n';
+      csvContent += generateCSVRow([
+        'ID', 'User ID', 'User Email', 'Amount', 'Description', 
+        'Status', 'Requested At', 'Processed At'
+      ]);
+      
+      for (const payment of paymentRequests) {
+        const user = userMap.get(payment.userId);
+        const userEmail = user ? user.email : 'Unknown';
+        csvContent += generateCSVRow([
+          payment.id,
+          payment.userId,
+          userEmail,
+          payment.amount,
+          payment.description || '',
+          payment.status,
+          payment.requestedAt,
+          payment.processedAt || ''
+        ]);
+      }
+      
+      // Set secure headers for file download with UTF-8 encoding
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="elisia-data-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.send(csvContent);
+      
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
+  // Announcement endpoints
+  app.post('/api/admin/announcements', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const data = insertAnnouncementSchema.parse({ ...req.body, createdBy: req.user.id });
+      const announcement = await storage.createAnnouncement(data);
+      res.json(announcement);
+    } catch (error) {
+      console.error("Error creating announcement:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create announcement" });
+    }
+  });
+
+  app.get('/api/announcements', isAuthenticated, async (req: any, res) => {
+    try {
+      const announcements = await storage.getActiveAnnouncements();
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error fetching announcements:", error);
+      res.status(500).json({ message: "Failed to fetch announcements" });
     }
   });
 

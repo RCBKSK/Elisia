@@ -76,6 +76,25 @@ export const paymentSettings = pgTable("payment_settings", {
   payoutFor10000Points: decimal("payout_for_10000_points", { precision: 10, scale: 2 }), // Payment for 10,000 points
   minimumPayout: decimal("minimum_payout", { precision: 10, scale: 2 }).default("10.00"), // Minimum amount for payout
   payoutFrequency: varchar("payout_frequency").default("monthly"), // weekly, biweekly, monthly
+  
+  // Drago Rental Settings - Regular Drago
+  regularDrago1Week: integer("regular_drago_1_week"), // Points required for 1 week Regular Drago
+  regularDrago2Weeks: integer("regular_drago_2_weeks"), // Points required for 2 weeks Regular Drago
+  regularDrago3Weeks: integer("regular_drago_3_weeks"), // Points required for 3 weeks Regular Drago
+  regularDrago1Month: integer("regular_drago_1_month"), // Points required for 1 month Regular Drago
+  
+  // Drago Rental Settings - Legendary Drago
+  legendaryDrago1Week: integer("legendary_drago_1_week"), // Points required for 1 week Legendary Drago
+  legendaryDrago2Weeks: integer("legendary_drago_2_weeks"), // Points required for 2 weeks Legendary Drago
+  legendaryDrago3Weeks: integer("legendary_drago_3_weeks"), // Points required for 3 weeks Legendary Drago
+  legendaryDrago1Month: integer("legendary_drago_1_month"), // Points required for 1 month Legendary Drago
+  
+  // Drago Rental Settings - War Drago
+  warDrago1Week: integer("war_drago_1_week"), // Points required for 1 week War Drago
+  warDrago2Weeks: integer("war_drago_2_weeks"), // Points required for 2 weeks War Drago
+  warDrago3Weeks: integer("war_drago_3_weeks"), // Points required for 3 weeks War Drago
+  warDrago1Month: integer("war_drago_1_month"), // Points required for 1 month War Drago
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -137,6 +156,23 @@ export const paymentRequests = pgTable("payment_requests", {
   processedBy: varchar("processed_by").references(() => users.id),
 });
 
+// Drago rental requests table
+export const dragoRentalRequests = pgTable("drago_rental_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  kingdomId: varchar("kingdom_id").references(() => kingdoms.id),
+  dragoType: varchar("drago_type").notNull(), // regular, legendary, war
+  duration: varchar("duration").notNull(), // 1_week, 2_weeks, 3_weeks, 1_month
+  pointsRequired: integer("points_required").notNull(),
+  status: varchar("status").default("pending"), // pending, approved, rejected, completed
+  requestedAt: timestamp("requested_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+  processedBy: varchar("processed_by").references(() => users.id),
+  adminNotes: text("admin_notes"),
+  rentalStartDate: timestamp("rental_start_date"),
+  rentalEndDate: timestamp("rental_end_date"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   kingdoms: many(kingdoms),
@@ -156,6 +192,7 @@ export const kingdomsRelations = relations(kingdoms, ({ one, many }) => ({
   }),
   contributions: many(contributions),
   paymentRequests: many(paymentRequests),
+  dragoRentalRequests: many(dragoRentalRequests),
 }));
 
 export const contributionsRelations = relations(contributions, ({ one }) => ({
@@ -222,6 +259,21 @@ export const paymentRequestsRelations = relations(paymentRequests, ({ one }) => 
   }),
 }));
 
+export const dragoRentalRequestsRelations = relations(dragoRentalRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [dragoRentalRequests.userId],
+    references: [users.id],
+  }),
+  kingdom: one(kingdoms, {
+    fields: [dragoRentalRequests.kingdomId],
+    references: [kingdoms.id],
+  }),
+  processedByUser: one(users, {
+    fields: [dragoRentalRequests.processedBy],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -279,6 +331,13 @@ export const insertUserPayoutSummarySchema = createInsertSchema(userPayoutSummar
   updatedAt: true,
 });
 
+export const insertDragoRentalRequestSchema = createInsertSchema(dragoRentalRequests).omit({
+  id: true,
+  requestedAt: true,
+  processedAt: true,
+  processedBy: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -298,3 +357,5 @@ export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = z.infer<typeof insertPayoutSchema>;
 export type UserPayoutSummary = typeof userPayoutSummary.$inferSelect;
 export type InsertUserPayoutSummary = z.infer<typeof insertUserPayoutSummarySchema>;
+export type DragoRentalRequest = typeof dragoRentalRequests.$inferSelect;
+export type InsertDragoRentalRequest = z.infer<typeof insertDragoRentalRequestSchema>;

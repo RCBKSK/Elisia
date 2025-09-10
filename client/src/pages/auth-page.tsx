@@ -153,9 +153,6 @@ export default function AuthPage() {
                   </form>
                 </Form>
 
-                <div className="text-center text-sm text-muted-foreground">
-                  <p>Admin credentials: username <strong>admin</strong>, password <strong>password</strong></p>
-                </div>
               </TabsContent>
 
               <TabsContent value="register" className="space-y-4 mt-6">

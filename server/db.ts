@@ -2,12 +2,12 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-// Enforce Supabase-only database configuration
-const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
+// Enforce Supabase-only database configuration - NO LOCAL DATABASE
+const databaseUrl = process.env.SUPABASE_DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(
-    "DATABASE_URL must be set. This project exclusively uses Supabase for data storage.",
+    "SUPABASE_DATABASE_URL must be set. This project exclusively uses Supabase for data storage. No local database is supported.",
   );
 }
 

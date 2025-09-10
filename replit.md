@@ -28,8 +28,10 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: Centralized error handling with proper HTTP status codes
 
 ### Database Design
-**IMPORTANT: This project exclusively uses Supabase PostgreSQL database - NEVER use Replit database**
+**CRITICAL: This project ONLY uses Supabase PostgreSQL - NO local databases supported**
 
+- **Configuration**: ONLY uses SUPABASE_DATABASE_URL environment variable
+- **No Fallback**: No local/Replit database support - Supabase connection required
 - **Users Table**: Stores user profiles with approval status and admin flags
 - **Kingdoms Table**: User-owned kingdoms with levels, status, and contribution tracking
 - **Contributions Table**: Periodic contributions linked to kingdoms

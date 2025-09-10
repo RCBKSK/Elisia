@@ -11,6 +11,7 @@ import LandContributions from "@/components/land-contributions";
 import LandStats from "@/components/land-stats";
 import AdminLandDashboard from "@/components/admin-land-dashboard";
 import AdminPaymentSettings from "@/components/admin-payment-settings";
+import AdminUserManagement from "@/components/admin-user-management";
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -38,12 +39,12 @@ export default function AdminDashboard() {
     enabled: isAuthenticated && (user as any)?.isAdmin,
   });
 
-  const { data: pendingUsers = [] } = useQuery({
+  const { data: pendingUsers = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/pending-users"],
     enabled: isAuthenticated && (user as any)?.isAdmin,
   });
 
-  const { data: pendingPayments = [] } = useQuery({
+  const { data: pendingPayments = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/pending-payments"],
     enabled: isAuthenticated && (user as any)?.isAdmin,
   });
@@ -384,7 +385,14 @@ export default function AdminDashboard() {
           
           {/* User Management Section - Only show in overview and users sections */}
           {(activeSection === "overview" || activeSection === "users") && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* Comprehensive User Management - Only show in users section */}
+            {activeSection === "users" && (
+              <AdminUserManagement />
+            )}
+            
+            {/* Pending approvals - Show in both sections */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* User Approvals */}
             <Card>
               <CardHeader>
@@ -510,6 +518,7 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+            </div>
           </div>
           )}
           

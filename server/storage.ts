@@ -7,6 +7,7 @@ import {
   paymentSettings,
   payouts,
   userPayoutSummary,
+  dragoRentalRequests,
   type User,
   type UpsertUser,
   type LoginData,
@@ -25,6 +26,8 @@ import {
   type InsertPayout,
   type UserPayoutSummary,
   type InsertUserPayoutSummary,
+  type DragoRentalRequest,
+  type InsertDragoRentalRequest,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -80,6 +83,13 @@ export interface IStorage {
   getUserPayoutSummary(userId: string): Promise<UserPayoutSummary | undefined>;
   updateUserPayoutSummary(userId: string, summary: Partial<InsertUserPayoutSummary>): Promise<UserPayoutSummary>;
   calculateUnpaidContributions(userId: string): Promise<{ amount: number; contributions: Contribution[] }>;
+  
+  // Drago rental operations
+  getUserDragoRentalRequests(userId: string): Promise<DragoRentalRequest[]>;
+  createDragoRentalRequest(data: InsertDragoRentalRequest): Promise<DragoRentalRequest>;
+  getAllDragoRentalRequests(): Promise<DragoRentalRequest[]>;
+  getPendingDragoRentalRequests(): Promise<DragoRentalRequest[]>;
+  updateDragoRentalRequestStatus(id: string, status: string, adminNotes?: string, processedBy?: string, rentalStartDate?: Date, rentalEndDate?: Date): Promise<DragoRentalRequest>;
   
   // Admin operations
   getSystemStats(): Promise<{
@@ -302,6 +312,59 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(paymentRequests.id, id))
       .returning();
+    return updatedRequest;
+  }
+
+  // Drago rental operations
+  async getUserDragoRentalRequests(userId: string): Promise<DragoRentalRequest[]> {
+    return db
+      .select()
+      .from(dragoRentalRequests)
+      .where(eq(dragoRentalRequests.userId, userId))
+      .orderBy(desc(dragoRentalRequests.requestedAt));
+  }
+
+  async createDragoRentalRequest(data: InsertDragoRentalRequest): Promise<DragoRentalRequest> {
+    const [request] = await db.insert(dragoRentalRequests).values(data).returning();
+    return request;
+  }
+
+  async getAllDragoRentalRequests(): Promise<DragoRentalRequest[]> {
+    return db
+      .select()
+      .from(dragoRentalRequests)
+      .orderBy(desc(dragoRentalRequests.requestedAt));
+  }
+
+  async getPendingDragoRentalRequests(): Promise<DragoRentalRequest[]> {
+    return db
+      .select()
+      .from(dragoRentalRequests)
+      .where(eq(dragoRentalRequests.status, "pending"))
+      .orderBy(desc(dragoRentalRequests.requestedAt));
+  }
+
+  async updateDragoRentalRequestStatus(
+    id: string, 
+    status: string, 
+    adminNotes?: string, 
+    processedBy?: string,
+    rentalStartDate?: Date,
+    rentalEndDate?: Date
+  ): Promise<DragoRentalRequest> {
+    const updates: any = { status };
+    if (adminNotes !== undefined) updates.adminNotes = adminNotes;
+    if (processedBy) updates.processedBy = processedBy;
+    if (rentalStartDate) updates.rentalStartDate = rentalStartDate;
+    if (rentalEndDate) updates.rentalEndDate = rentalEndDate;
+    if (status !== "pending") updates.processedAt = new Date();
+
+    const [updatedRequest] = await db
+      .update(dragoRentalRequests)
+      .set(updates)
+      .where(eq(dragoRentalRequests.id, id))
+      .returning();
+
     return updatedRequest;
   }
 

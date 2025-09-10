@@ -9,6 +9,7 @@ import {
   insertPaymentRequestSchema,
   insertPaymentSettingsSchema,
   insertPayoutSchema,
+  insertDragoRentalRequestSchema,
   loginSchema,
   registerSchema 
 } from "@shared/schema";
@@ -162,6 +163,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating payment request:", error);
       res.status(400).json({ message: "Failed to create payment request" });
+    }
+  });
+
+  // Drago rental request routes
+  app.get('/api/drago-rental-requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const requests = await storage.getUserDragoRentalRequests(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching drago rental requests:", error);
+      res.status(500).json({ message: "Failed to fetch drago rental requests" });
+    }
+  });
+
+  app.post('/api/drago-rental-requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const data = insertDragoRentalRequestSchema.parse({ ...req.body, userId });
+      const request = await storage.createDragoRentalRequest(data);
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating drago rental request:", error);
+      res.status(400).json({ message: "Failed to create drago rental request" });
     }
   });
 
@@ -379,6 +404,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating payment settings:", error);
       res.status(400).json({ message: "Failed to update payment settings" });
+    }
+  });
+
+  // Admin drago rental routes
+  app.get('/api/admin/drago-rental-requests', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const requests = await storage.getAllDragoRentalRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching drago rental requests:", error);
+      res.status(500).json({ message: "Failed to fetch drago rental requests" });
+    }
+  });
+
+  app.get('/api/admin/pending-drago-rentals', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const requests = await storage.getPendingDragoRentalRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching pending drago rentals:", error);
+      res.status(500).json({ message: "Failed to fetch pending drago rentals" });
+    }
+  });
+
+  app.put('/api/admin/drago-rental-requests/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status, adminNotes, rentalStartDate, rentalEndDate } = req.body;
+      const processedBy = req.user.id;
+      
+      const request = await storage.updateDragoRentalRequestStatus(
+        id, 
+        status, 
+        adminNotes, 
+        processedBy,
+        rentalStartDate ? new Date(rentalStartDate) : undefined,
+        rentalEndDate ? new Date(rentalEndDate) : undefined
+      );
+      res.json(request);
+    } catch (error) {
+      console.error("Error updating drago rental request:", error);
+      res.status(500).json({ message: "Failed to update drago rental request" });
     }
   });
 

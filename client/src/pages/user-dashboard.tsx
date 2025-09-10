@@ -12,6 +12,7 @@ import KingdomCard from "@/components/kingdom-card";
 import StatCard from "@/components/stat-card";
 import ContributionForm from "@/components/contribution-form";
 import PaymentRequestForm from "@/components/payment-request-form";
+import DragoRentalForm from "@/components/drago-rental-form";
 import LandContributions from "@/components/land-contributions";
 import UserPayoutSummary from "@/components/user-payout-summary";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -37,17 +38,17 @@ export default function UserDashboard() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: kingdoms = [], isLoading: kingdomsLoading } = useQuery({
+  const { data: kingdoms = [], isLoading: kingdomsLoading } = useQuery<any[]>({
     queryKey: ["/api/kingdoms"],
     enabled: isAuthenticated,
   });
 
-  const { data: paymentRequests = [] } = useQuery({
+  const { data: paymentRequests = [] } = useQuery<any[]>({
     queryKey: ["/api/payment-requests"],
     enabled: isAuthenticated,
   });
 
-  const { data: wallets = [] } = useQuery({
+  const { data: wallets = [] } = useQuery<any[]>({
     queryKey: ["/api/wallets"],
     enabled: isAuthenticated,
   });
@@ -244,6 +245,18 @@ export default function UserDashboard() {
             >
               <i className="fas fa-money-bill-wave"></i>
               <span>Payment Requests</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection("dragos")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "dragos" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-dragos"
+            >
+              <i className="fas fa-dragon"></i>
+              <span>Drago Rentals</span>
             </button>
           </nav>
           
@@ -557,6 +570,11 @@ export default function UserDashboard() {
               
               <PaymentRequestForm />
             </div>
+          )}
+
+          {/* Drago Rentals Section */}
+          {activeSection === "dragos" && (
+            <DragoRentalForm kingdoms={kingdoms} />
           )}
         </main>
       </div>

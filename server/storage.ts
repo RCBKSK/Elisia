@@ -36,8 +36,11 @@ export interface IStorage {
   createUser(user: RegisterData): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   getPendingUsers(): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
+  getAllUsersWithDetails(): Promise<any[]>;
   approveUser(id: string): Promise<void>;
   rejectUser(id: string): Promise<void>;
+  deleteUser(id: string): Promise<void>;
   
   // Kingdom operations
   getUserKingdoms(userId: string): Promise<Kingdom[]>;
@@ -128,6 +131,57 @@ export class DatabaseStorage implements IStorage {
   }
 
   async rejectUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getAllUsersWithDetails(): Promise<any[]> {
+    const result = await db
+      .select({
+        user: users,
+        kingdoms: sql`COALESCE(array_agg(
+          CASE WHEN ${kingdoms.id} IS NOT NULL 
+          THEN json_build_object(
+            'id', ${kingdoms.id},
+            'name', ${kingdoms.name},
+            'lokKingdomId', ${kingdoms.lokKingdomId},
+            'level', ${kingdoms.level},
+            'status', ${kingdoms.status},
+            'totalContributions', ${kingdoms.totalContributions}
+          ) END
+        ) FILTER (WHERE ${kingdoms.id} IS NOT NULL), '{}')`.as('kingdoms'),
+        wallets: sql`COALESCE(array_agg(
+          CASE WHEN ${wallets.id} IS NOT NULL 
+          THEN json_build_object(
+            'id', ${wallets.id},
+            'address', ${wallets.address},
+            'isPrimary', ${wallets.isPrimary},
+            'isActive', ${wallets.isActive}
+          ) END
+        ) FILTER (WHERE ${wallets.id} IS NOT NULL), '{}')`.as('wallets'),
+      })
+      .from(users)
+      .leftJoin(kingdoms, eq(users.id, kingdoms.userId))
+      .leftJoin(wallets, eq(users.id, wallets.userId))
+      .groupBy(users.id)
+      .orderBy(desc(users.createdAt));
+
+    return result;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    // Delete related data first (cascade delete)
+    await db.delete(contributions).where(sql`${contributions.kingdomId} IN (SELECT ${kingdoms.id} FROM ${kingdoms} WHERE ${kingdoms.userId} = ${id})`);
+    await db.delete(kingdoms).where(eq(kingdoms.userId, id));
+    await db.delete(wallets).where(eq(wallets.userId, id));
+    await db.delete(paymentRequests).where(eq(paymentRequests.userId, id));
+    await db.delete(payouts).where(eq(payouts.userId, id));
+    await db.delete(userPayoutSummary).where(eq(userPayoutSummary.userId, id));
+    
+    // Finally delete the user
     await db.delete(users).where(eq(users.id, id));
   }
 

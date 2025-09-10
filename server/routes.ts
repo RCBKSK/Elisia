@@ -208,6 +208,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/all-users', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsersWithDetails();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching all users:", error);
+      res.status(500).json({ message: "Failed to fetch all users" });
+    }
+  });
+
+  app.delete('/api/admin/delete-user/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   app.get('/api/admin/pending-payments', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const requests = await storage.getPendingPaymentRequests();

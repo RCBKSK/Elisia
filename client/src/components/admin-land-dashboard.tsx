@@ -30,7 +30,7 @@ interface LandStatsData {
   totalKingdoms: number;
 }
 
-const LAND_IDS = ['134378', '135682', '145933', '134152', '137752'];
+const LAND_IDS = ['134378', '135682', '145933', '134152', '137752', '133144', '133145', '133146', '132938', '132939', '133195'];
 
 export default function AdminLandDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState("currentWeek");

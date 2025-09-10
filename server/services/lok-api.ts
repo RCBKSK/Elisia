@@ -2,7 +2,8 @@ import fetch from 'node-fetch';
 
 // Land IDs from Elisia Land Program configuration
 const ALL_LAND_IDS = [
-  "134378", "135682", "145933", "134152", "137752"
+  "134378", "135682", "145933", "134152", "137752",
+  "133144", "133145", "133146", "132938", "132939", "133195"
 ];
 
 export interface LokContribution {

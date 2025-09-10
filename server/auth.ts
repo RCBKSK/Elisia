@@ -54,8 +54,9 @@ export function setupAuth(app: Express) {
     store: sessionStore,
     cookie: {
       httpOnly: true,
-      secure: false, // Set to true in production with HTTPS
+      secure: process.env.NODE_ENV === 'production', // Enable secure cookies in production
       maxAge: sessionTtl,
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
     },
   };
 
@@ -71,7 +72,19 @@ export function setupAuth(app: Express) {
         if (!user || !(await comparePasswords(password, user.password))) {
           return done(null, false);
         } else {
-          return done(null, user);
+          // Convert null to undefined for Express User compatibility
+          const expressUser = {
+            ...user,
+            email: user.email ?? undefined,
+            firstName: user.firstName ?? undefined,
+            lastName: user.lastName ?? undefined,
+            profileImageUrl: user.profileImageUrl ?? undefined,
+            isApproved: user.isApproved ?? undefined,
+            isAdmin: user.isAdmin ?? undefined,
+            createdAt: user.createdAt ?? undefined,
+            updatedAt: user.updatedAt ?? undefined,
+          };
+          return done(null, expressUser);
         }
       } catch (error) {
         return done(error);
@@ -89,7 +102,19 @@ export function setupAuth(app: Express) {
       if (!user) {
         return done(null, false);
       }
-      done(null, user);
+      // Convert null to undefined for Express User compatibility
+      const expressUser = {
+        ...user,
+        email: user.email ?? undefined,
+        firstName: user.firstName ?? undefined,
+        lastName: user.lastName ?? undefined,
+        profileImageUrl: user.profileImageUrl ?? undefined,
+        isApproved: user.isApproved ?? undefined,
+        isAdmin: user.isAdmin ?? undefined,
+        createdAt: user.createdAt ?? undefined,
+        updatedAt: user.updatedAt ?? undefined,
+      };
+      done(null, expressUser);
     } catch (error) {
       console.error('Deserialization error:', error);
       done(null, false);
@@ -109,9 +134,22 @@ export function setupAuth(app: Express) {
         isApproved: false, // New users need approval
       });
 
-      req.login(user, (err) => {
+      // Convert null to undefined for Express User compatibility
+      const expressUser = {
+        ...user,
+        email: user.email ?? undefined,
+        firstName: user.firstName ?? undefined,
+        lastName: user.lastName ?? undefined,
+        profileImageUrl: user.profileImageUrl ?? undefined,
+        isApproved: user.isApproved ?? undefined,
+        isAdmin: user.isAdmin ?? undefined,
+        createdAt: user.createdAt ?? undefined,
+        updatedAt: user.updatedAt ?? undefined,
+      };
+      
+      req.login(expressUser, (err) => {
         if (err) return next(err);
-        res.status(201).json(user);
+        res.status(201).json(expressUser);
       });
     } catch (error) {
       res.status(500).json({ message: "Registration failed" });

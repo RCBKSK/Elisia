@@ -20,6 +20,11 @@ console.log("📡 Connecting to:", maskedUrl);
 const connectionString = databaseUrl;
 export const pool = new Pool({ 
   connectionString,
-  ssl: { rejectUnauthorized: false } // Supabase requires SSL
+  // SSL configuration for both development and production
+  ssl: process.env.NODE_ENV === 'development' ? { rejectUnauthorized: false } : { rejectUnauthorized: false },
+  // Connection pool settings for production
+  max: process.env.NODE_ENV === 'production' ? 20 : 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 export const db = drizzle(pool, { schema });

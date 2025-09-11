@@ -28,10 +28,10 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: Centralized error handling with proper HTTP status codes
 
 ### Database Design
-**MIGRATED: Now uses Replit's built-in PostgreSQL database**
+**CRITICAL: This project ONLY uses Supabase PostgreSQL - NO local databases supported**
 
-- **Configuration**: Uses DATABASE_URL environment variable (Replit managed)
-- **Database Integration**: Uses blueprint:javascript_database for proper setup
+- **Configuration**: ONLY uses SUPABASE_DATABASE_URL environment variable
+- **No Fallback**: No local/Replit database support - Supabase connection required
 - **Users Table**: Stores user profiles with approval status and admin flags
 - **Kingdoms Table**: User-owned kingdoms with levels, status, and contribution tracking
 - **Contributions Table**: Periodic contributions linked to kingdoms
@@ -56,9 +56,9 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Database
-- **Replit PostgreSQL**: Primary PostgreSQL database managed by Replit
-- **Connection Pooling**: @neondatabase/serverless for optimized connections  
-- **Configuration**: Uses DATABASE_URL environment variable (auto-managed by Replit)
+- **Supabase**: Primary PostgreSQL database - ALL data stored here exclusively
+- **Connection Pooling**: @neondatabase/serverless for optimized connections
+- **Configuration**: Always use SUPABASE_DATABASE_URL environment variable
 
 ### Authentication
 - **Replit Auth**: OpenID Connect integration for user authentication

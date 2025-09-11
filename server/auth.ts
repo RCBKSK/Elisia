@@ -7,6 +7,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User } from "@shared/schema";
 import connectPg from "connect-pg-simple";
+import { Pool } from "pg";
 
 declare global {
   namespace Express {
@@ -40,13 +41,21 @@ async function comparePasswords(supplied: string, stored: string) {
 export function setupAuth(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
+  
+  // Create a separate Pool for session storage (Render.com compatible)
+  const sessionPool = new Pool({
+    connectionString: process.env.SUPABASE_DATABASE_URL + '?pgbouncer=true',
+    max: 1, // Critical for serverless deployment
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+    ssl: { rejectUnauthorized: false }
+  });
+
   const sessionStore = new pgStore({
-    conString: process.env.SUPABASE_DATABASE_URL,
+    pool: sessionPool,
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
-    // Optimize for serverless deployment
-    pool: false, // Use individual connections instead of pooling
     pruneSessionInterval: 60 * 5, // Clean up expired sessions every 5 minutes
   });
 

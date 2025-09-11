@@ -21,8 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   setupAuth(app);
   
-  // Create admin user on startup
-  await createAdminUser();
+  // Admin users should be fetched from Supabase only - no creation during startup
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {

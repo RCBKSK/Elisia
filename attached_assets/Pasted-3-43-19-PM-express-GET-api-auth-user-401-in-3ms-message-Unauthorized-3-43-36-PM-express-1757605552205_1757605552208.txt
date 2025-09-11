@@ -1,0 +1,28 @@
+3:43:19 PM [express] GET /api/auth/user 401 in 3ms :: {"message":"Unauthorized"}
+3:43:36 PM [express] POST /api/login 500 in 2009ms :: {"message":"Connection terminated due to conne…
+Error: Connection terminated due to connection timeout
+    at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///opt/render/project/src/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DatabaseStorage.getUserByUsername (file:///opt/render/project/src/dist/index.js:427:20)
+    at async Strategy._verify (file:///opt/render/project/src/dist/index.js:736:22)
+3:43:43 PM [express] POST /api/login 500 in 2003ms :: {"message":"Connection terminated due to conne…
+Error: Connection terminated due to connection timeout
+    at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///opt/render/project/src/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DatabaseStorage.getUserByUsername (file:///opt/render/project/src/dist/index.js:427:20)
+    at async Strategy._verify (file:///opt/render/project/src/dist/index.js:736:22)
+3:44:02 PM [express] POST /api/login 500 in 2069ms :: {"message":"Internal Server Error"}
+AggregateError [ETIMEDOUT]: 
+    at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async PGStore._asyncQuery (/opt/render/project/src/node_modules/connect-pg-simple/index.js:322:21)
+    at async PGStore._rawEnsureSessionStoreTable (/opt/render/project/src/node_modules/connect-pg-simple/index.js:177:19)
+    at async PGStore._asyncQuery (/opt/render/project/src/node_modules/connect-pg-simple/index.js:315:7)
+AggregateError [ETIMEDOUT]: 
+    at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async PGStore._asyncQuery (/opt/render/project/src/node_modules/connect-pg-simple/index.js:322:21)
+    at async PGStore._rawEnsureSessionStoreTable (/opt/render/project/src/node_modules/connect-pg-simple/index.js:177:19)
+    at async PGStore._asyncQuery (/opt/render/project/src/node_modules/connect-pg-simple/index.js:315:7)

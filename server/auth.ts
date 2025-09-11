@@ -45,6 +45,9 @@ export function setupAuth(app: Express) {
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
+    // Optimize for serverless deployment
+    pool: false, // Use individual connections instead of pooling
+    pruneSessionInterval: 60 * 5, // Clean up expired sessions every 5 minutes
   });
 
   const sessionSettings: session.SessionOptions = {

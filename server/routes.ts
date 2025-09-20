@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, createAdminUser } from "./auth";
+import { setupAuth, isAuthenticated, isApproved, createAdminUser } from "./auth";
 import { 
   insertKingdomSchema, 
   insertContributionSchema, 
@@ -39,9 +39,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin middleware
+  // Admin middleware - requires authentication first
   const isAdmin = async (req: any, res: any, next: any) => {
     try {
+      // First ensure user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const user = req.user;
       
       if (!user?.isAdmin) {
@@ -55,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Kingdom routes
-  app.get('/api/kingdoms', isAuthenticated, async (req: any, res) => {
+  app.get('/api/kingdoms', isApproved, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const kingdoms = await storage.getUserKingdoms(userId);
@@ -66,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/kingdoms', isAuthenticated, async (req: any, res) => {
+  app.post('/api/kingdoms', isApproved, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const data = insertKingdomSchema.parse({ ...req.body, userId });
@@ -87,7 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/kingdoms/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/kingdoms/:id', isApproved, async (req: any, res) => {
     try {
       const { id } = req.params;
       const data = insertKingdomSchema.partial().parse(req.body);
@@ -100,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Contribution routes
-  app.get('/api/kingdoms/:id/contributions', isAuthenticated, async (req: any, res) => {
+  app.get('/api/kingdoms/:id/contributions', isApproved, async (req: any, res) => {
     try {
       const { id } = req.params;
       const { period } = req.query;
@@ -116,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/contributions', isAuthenticated, async (req: any, res) => {
+  app.post('/api/contributions', isApproved, async (req: any, res) => {
     try {
       const data = insertContributionSchema.parse(req.body);
       const contribution = await storage.createContribution(data);
@@ -128,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Wallet routes
-  app.get('/api/wallets', isAuthenticated, async (req: any, res) => {
+  app.get('/api/wallets', isApproved, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const wallets = await storage.getUserWallets(userId);
@@ -139,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/wallets', isAuthenticated, async (req: any, res) => {
+  app.post('/api/wallets', isApproved, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const data = insertWalletSchema.parse({ ...req.body, userId });
@@ -159,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment request routes
-  app.get('/api/payment-requests', isAuthenticated, async (req: any, res) => {
+  app.get('/api/payment-requests', isApproved, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const requests = await storage.getUserPaymentRequests(userId);
@@ -170,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/payment-requests', isAuthenticated, async (req: any, res) => {
+  app.post('/api/payment-requests', isApproved, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const data = insertPaymentRequestSchema.parse({ ...req.body, userId });
@@ -183,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Drago rental request routes
-  app.get('/api/drago-rental-requests', isAuthenticated, async (req: any, res) => {
+  app.get('/api/drago-rental-requests', isApproved, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const requests = await storage.getUserDragoRentalRequests(userId);
@@ -194,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/drago-rental-requests', isAuthenticated, async (req: any, res) => {
+  app.post('/api/drago-rental-requests', isApproved, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const data = insertDragoRentalRequestSchema.parse({ ...req.body, userId });
@@ -207,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get('/api/admin/stats', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get('/api/admin/stats', isAdmin, async (req: any, res) => {
     try {
       const stats = await storage.getSystemStats();
       res.json(stats);
@@ -217,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/pending-users', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get('/api/admin/pending-users', isAdmin, async (req: any, res) => {
     try {
       const users = await storage.getPendingUsers();
       res.json(users);
@@ -227,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/approve-user/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.post('/api/admin/approve-user/:id', isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
       await storage.approveUser(id);
@@ -238,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/reject-user/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.delete('/api/admin/reject-user/:id', isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
       await storage.rejectUser(id);
@@ -249,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/all-users', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get('/api/admin/all-users', isAdmin, async (req: any, res) => {
     try {
       const users = await storage.getAllUsersWithDetails();
       res.json(users);
@@ -259,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/delete-user/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.delete('/api/admin/delete-user/:id', isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
       await storage.deleteUser(id);

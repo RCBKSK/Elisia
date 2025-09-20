@@ -192,6 +192,18 @@ export const isAuthenticated = (req: any, res: any, next: any) => {
   next();
 };
 
+export const isApproved = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  if (!req.user?.isApproved) {
+    return res.status(403).json({ message: "Account pending approval" });
+  }
+  
+  next();
+};
+
 export async function createAdminUser() {
   try {
     const existingAdmin = await storage.getUserByUsername("admin");

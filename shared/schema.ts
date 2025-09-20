@@ -30,7 +30,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: varchar("username").unique().notNull(),
   password: varchar("password").notNull(),
-  email: varchar("email"),
+  email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -135,7 +135,7 @@ export const userPayoutSummary = pgTable("user_payout_summary", {
 export const wallets = pgTable("wallets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  address: varchar("address").notNull(),
+  address: varchar("address").unique().notNull(),
   isPrimary: boolean("is_primary").default(false),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),

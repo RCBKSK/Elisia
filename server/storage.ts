@@ -168,26 +168,24 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select({
         user: users,
-        kingdoms: sql`COALESCE(array_agg(
-          CASE WHEN ${kingdoms.id} IS NOT NULL 
-          THEN json_build_object(
+        kingdoms: sql`COALESCE(jsonb_agg(
+          DISTINCT jsonb_build_object(
             'id', ${kingdoms.id},
             'name', ${kingdoms.name},
             'lokKingdomId', ${kingdoms.lokKingdomId},
             'level', ${kingdoms.level},
             'status', ${kingdoms.status},
             'totalContributions', ${kingdoms.totalContributions}
-          ) END
-        ) FILTER (WHERE ${kingdoms.id} IS NOT NULL), '{}')`.as('kingdoms'),
-        wallets: sql`COALESCE(array_agg(
-          CASE WHEN ${wallets.id} IS NOT NULL 
-          THEN json_build_object(
+          ) ORDER BY ${kingdoms.createdAt}
+        ) FILTER (WHERE ${kingdoms.id} IS NOT NULL), '[]'::jsonb)`.as('kingdoms'),
+        wallets: sql`COALESCE(jsonb_agg(
+          DISTINCT jsonb_build_object(
             'id', ${wallets.id},
             'address', ${wallets.address},
             'isPrimary', ${wallets.isPrimary},
             'isActive', ${wallets.isActive}
-          ) END
-        ) FILTER (WHERE ${wallets.id} IS NOT NULL), '{}')`.as('wallets'),
+          ) ORDER BY ${wallets.createdAt}
+        ) FILTER (WHERE ${wallets.id} IS NOT NULL), '[]'::jsonb)`.as('wallets'),
       })
       .from(users)
       .leftJoin(kingdoms, eq(users.id, kingdoms.userId))

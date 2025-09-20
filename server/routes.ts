@@ -70,6 +70,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const data = insertKingdomSchema.parse({ ...req.body, userId });
+      
+      // Check for duplicate kingdom ID if provided
+      if (data.lokKingdomId) {
+        const existingKingdom = await storage.getKingdomByLokId(data.lokKingdomId);
+        if (existingKingdom) {
+          return res.status(400).json({ message: "Kingdom ID already exists" });
+        }
+      }
+      
       const kingdom = await storage.createKingdom(data);
       res.json(kingdom);
     } catch (error) {
@@ -134,6 +143,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const data = insertWalletSchema.parse({ ...req.body, userId });
+      
+      // Check for duplicate wallet address
+      const existingWallet = await storage.getWalletByAddress(data.address);
+      if (existingWallet) {
+        return res.status(400).json({ message: "Wallet address already exists" });
+      }
+      
       const wallet = await storage.createWallet(data);
       res.json(wallet);
     } catch (error) {

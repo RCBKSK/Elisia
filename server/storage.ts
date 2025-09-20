@@ -39,6 +39,7 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: RegisterData): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   getPendingUsers(): Promise<User[]>;
@@ -50,6 +51,7 @@ export interface IStorage {
   
   // Kingdom operations
   getUserKingdoms(userId: string): Promise<Kingdom[]>;
+  getKingdomByLokId(lokKingdomId: string): Promise<Kingdom | undefined>;
   createKingdom(kingdom: InsertKingdom): Promise<Kingdom>;
   updateKingdom(id: string, kingdom: Partial<InsertKingdom>): Promise<Kingdom>;
   getKingdom(id: string): Promise<Kingdom | undefined>;
@@ -62,6 +64,7 @@ export interface IStorage {
   
   // Wallet operations
   getUserWallets(userId: string): Promise<Wallet[]>;
+  getWalletByAddress(address: string): Promise<Wallet | undefined>;
   createWallet(wallet: InsertWallet): Promise<Wallet>;
   updateWallet(id: string, wallet: Partial<InsertWallet>): Promise<Wallet>;
   
@@ -117,6 +120,11 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
@@ -208,6 +216,11 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(kingdoms).where(eq(kingdoms.userId, userId));
   }
 
+  async getKingdomByLokId(lokKingdomId: string): Promise<Kingdom | undefined> {
+    const [kingdom] = await db.select().from(kingdoms).where(eq(kingdoms.lokKingdomId, lokKingdomId));
+    return kingdom;
+  }
+
   async createKingdom(kingdom: InsertKingdom): Promise<Kingdom> {
     const [newKingdom] = await db.insert(kingdoms).values(kingdom).returning();
     return newKingdom;
@@ -266,6 +279,11 @@ export class DatabaseStorage implements IStorage {
   // Wallet operations
   async getUserWallets(userId: string): Promise<Wallet[]> {
     return db.select().from(wallets).where(eq(wallets.userId, userId));
+  }
+
+  async getWalletByAddress(address: string): Promise<Wallet | undefined> {
+    const [wallet] = await db.select().from(wallets).where(eq(wallets.address, address));
+    return wallet;
   }
 
   async createWallet(wallet: InsertWallet): Promise<Wallet> {

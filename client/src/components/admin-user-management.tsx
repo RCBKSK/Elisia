@@ -17,6 +17,7 @@ export default function AdminUserManagement() {
 
   const { data: allUsers = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/all-users"],
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const deleteUserMutation = useMutation({
@@ -110,7 +111,7 @@ export default function AdminUserManagement() {
               const wallets = userItem.wallets || [];
               
               return (
-                <Card key={user.id} className="border-l-4 border-l-primary/20" data-testid={`user-card-${user.id}`}>
+                <Card key={`user-${user.id}-${user.username}-${user.createdAt}`} className="border-l-4 border-l-primary/20" data-testid={`user-card-${user.id}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4 flex-1">
@@ -167,8 +168,8 @@ export default function AdminUserManagement() {
                             </div>
                             {kingdoms.length > 0 ? (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {kingdoms.map((kingdom: any) => (
-                                  <div key={kingdom.id} className="p-3 bg-muted rounded-lg">
+                                {kingdoms.map((kingdom: any, index: number) => (
+                                  <div key={`kingdom-${kingdom.id}-${user.id}-${index}`} className="p-3 bg-muted rounded-lg">
                                     <div className="flex items-center justify-between">
                                       <div>
                                         <p className="font-medium text-sm">{kingdom.name}</p>
@@ -211,8 +212,8 @@ export default function AdminUserManagement() {
                             </div>
                             {wallets.length > 0 ? (
                               <div className="space-y-2">
-                                {wallets.map((wallet: any) => (
-                                  <div key={wallet.id} className="p-2 bg-muted rounded">
+                                {wallets.map((wallet: any, index: number) => (
+                                  <div key={`wallet-${wallet.id}-${user.id}-${index}`} className="p-2 bg-muted rounded">
                                     <div className="flex items-center justify-between">
                                       <span className="text-sm font-mono">
                                         {wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}

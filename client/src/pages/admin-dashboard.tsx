@@ -126,11 +126,13 @@ export default function AdminDashboard() {
   const { data: pendingUsers = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/pending-users"],
     enabled: isAuthenticated && (user as any)?.isAdmin,
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const { data: pendingPayments = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/pending-payments"],
     enabled: isAuthenticated && (user as any)?.isAdmin,
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const approveUserMutation = useMutation({
@@ -139,6 +141,7 @@ export default function AdminDashboard() {
       toast({ title: "Success", description: "User approved successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-users"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -160,6 +163,7 @@ export default function AdminDashboard() {
       toast({ title: "Success", description: "User rejected successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-users"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {

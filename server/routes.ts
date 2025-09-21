@@ -358,6 +358,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get contributions for registered users' kingdoms only
+  app.get('/api/admin/registered-kingdoms-contributions', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { period = 'currentWeek', customDays, continent, landId } = req.query;
+      
+      // Get all registered kingdoms with LOK IDs
+      const registeredKingdoms = await storage.getAllKingdoms();
+      const lokKingdomIds = registeredKingdoms
+        .filter(kingdom => kingdom.lokKingdomId)
+        .map(kingdom => kingdom.lokKingdomId);
+      
+      if (lokKingdomIds.length === 0) {
+        return res.json({
+          data: [],
+          from: new Date().toISOString().split('T')[0],
+          to: new Date().toISOString().split('T')[0]
+        });
+      }
+      
+      let result = await getContributionsForKingdoms(
+        lokKingdomIds,
+        period as string, 
+        customDays ? parseInt(customDays as string) : undefined
+      );
+      
+      // Filter by continent if specified
+      if (continent && continent !== 'all') {
+        result.data = result.data.filter(item => item.continent === parseInt(continent as string));
+      }
+      
+      // Filter by land ID if specified
+      if (landId && landId !== 'all') {
+        result.data = result.data.filter(item => item.landId === landId);
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching registered kingdoms contributions:", error);
+      res.status(500).json({ message: "Failed to fetch registered kingdoms contributions" });
+    }
+  });
+
   // Get aggregated stats by continent and land
   app.get('/api/admin/land-stats', isAuthenticated, isAdmin, async (req: any, res) => {
     try {

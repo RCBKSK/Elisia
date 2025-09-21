@@ -23,28 +23,33 @@ interface ContributionResult {
 
 interface LandContributionsProps {
   isAdmin: boolean;
+  registeredOnly?: boolean; // New prop to indicate if only registered kingdoms should be shown
 }
 
-export default function LandContributions({ isAdmin }: LandContributionsProps) {
+export default function LandContributions({ isAdmin, registeredOnly = false }: LandContributionsProps) {
   const queryClient = useQueryClient();
   const [selectedPeriod, setSelectedPeriod] = useState("currentWeek");
   const [customDays, setCustomDays] = useState("");
   const [selectedContinent, setSelectedContinent] = useState("all");
   const [selectedLand, setSelectedLand] = useState("all");
 
-  const endpoint = isAdmin ? "/api/admin/land-contributions" : "/api/user/land-contributions";
+  // Determine the API endpoint based on admin status and registeredOnly flag
+  const apiEndpoint = isAdmin
+    ? (registeredOnly ? '/api/admin/registered-kingdoms-contributions' : '/api/admin/land-contributions')
+    : '/api/user/land-contributions';
 
-  const { data: contributionsData, isLoading, error } = useQuery<ContributionResult>({
-    queryKey: [endpoint, selectedPeriod, customDays, selectedContinent, selectedLand],
+  const { data: contributionsData, isLoading: contributionsLoading, error: contributionsError } = useQuery<ContributionResult>({
+    queryKey: [apiEndpoint, selectedPeriod, customDays, selectedContinent, selectedLand],
     queryFn: async () => {
-      let url = `${endpoint}?period=${selectedPeriod}`;
+      let url = `${apiEndpoint}?period=${selectedPeriod}`;
       if (selectedPeriod === 'customDays' && customDays) {
         url += `&customDays=${customDays}`;
       }
-      if (isAdmin && selectedContinent !== 'all') {
+      // Only apply continent and land filters if they are for admin and not for registeredOnly
+      if (isAdmin && !registeredOnly && selectedContinent !== 'all') {
         url += `&continent=${selectedContinent}`;
       }
-      if (isAdmin && selectedLand !== 'all') {
+      if (isAdmin && !registeredOnly && selectedLand !== 'all') {
         url += `&landId=${selectedLand}`;
       }
       const response = await fetch(url);
@@ -83,6 +88,7 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
           <CardTitle className="flex items-center space-x-2">
             <i className="fas fa-chart-line text-accent"></i>
             <span>Land Contributions</span>
+            {registeredOnly && <span className="text-sm font-normal text-muted-foreground">(Registered Kingdoms)</span>}
           </CardTitle>
           <div className="flex items-center space-x-3 flex-wrap gap-2">
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -99,8 +105,8 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
                 <SelectItem value="customDays">Custom Days</SelectItem>
               </SelectContent>
             </Select>
-            
-            {isAdmin && (
+
+            {isAdmin && !registeredOnly && ( // Show filters only for admin and not for registeredOnly view
               <>
                 <Select value={selectedContinent} onValueChange={setSelectedContinent}>
                   <SelectTrigger className="w-32">
@@ -115,7 +121,7 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                
+
                 <Select value={selectedLand} onValueChange={setSelectedLand}>
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Land" />
@@ -154,6 +160,7 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
                 // Invalidate queries to refresh data without page reload
                 queryClient.invalidateQueries({ queryKey: ["/api/user/land-contributions"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/admin/land-contributions"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/registered-kingdoms-contributions"] }); // Invalidate new endpoint
                 queryClient.invalidateQueries({ queryKey: ["/api/admin/land-stats"] });
               }}
               data-testid="button-refresh-contributions"
@@ -165,7 +172,7 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading && (
+        {contributionsLoading && (
           <div className="flex items-center justify-center py-8">
             <div className="w-8 h-8 gaming-gradient rounded-full flex items-center justify-center animate-pulse">
               <i className="fas fa-chart-line text-accent-foreground"></i>
@@ -174,11 +181,11 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
           </div>
         )}
 
-        {error && (
+        {contributionsError && (
           <div className="text-center py-8">
             <i className="fas fa-exclamation-triangle text-destructive text-2xl mb-2"></i>
             <p className="text-muted-foreground">Failed to load land contributions</p>
-            <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
+            <p className="text-sm text-muted-foreground">{(contributionsError as Error).message}</p>
           </div>
         )}
 
@@ -203,7 +210,7 @@ export default function LandContributions({ isAdmin }: LandContributionsProps) {
             {/* Contributions List */}
             <div className="space-y-3">
               <h4 className="font-medium text-foreground">
-                {isAdmin ? "All Kingdom Contributions" : "Your Kingdom Contributions"}
+                {isAdmin ? (registeredOnly ? "Registered Kingdoms Contributions" : "All Kingdom Contributions") : "Your Kingdom Contributions"}
               </h4>
               {aggregatedContributions.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">

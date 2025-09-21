@@ -34,7 +34,7 @@ export default function AdminDashboard() {
     try {
       const response = await fetch('/api/admin/export-data');
       if (!response.ok) throw new Error('Failed to export data');
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -45,7 +45,7 @@ export default function AdminDashboard() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       toast({
         title: "Success",
         description: "Data exported successfully"
@@ -247,7 +247,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
             <button 
@@ -318,7 +318,19 @@ export default function AdminDashboard() {
               data-testid="nav-contributions"
             >
               <i className="fas fa-chart-line"></i>
-              <span>Land Contributions</span>
+              <span>All Land Contributions</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection("registered-kingdoms")}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md w-full text-left ${
+                activeSection === "registered-kingdoms" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              data-testid="nav-registered-kingdoms"
+            >
+              <i className="fas fa-users"></i>
+              <span>Registered Users Contributions</span>
             </button>
             <button 
               onClick={() => setActiveSection("analytics")}
@@ -357,7 +369,7 @@ export default function AdminDashboard() {
               <span>Settings</span>
             </button>
           </nav>
-          
+
           {/* User Profile & Logout */}
           <div className="p-4 border-t border-border space-y-3">
             <div className="flex items-center space-x-3">
@@ -408,7 +420,8 @@ export default function AdminDashboard() {
                 {activeSection === "users" && "User Management"}
                 {activeSection === "kingdoms" && "Kingdom Management"}
                 {activeSection === "payments" && "Payment Requests"}
-                {activeSection === "contributions" && "Land Contributions"}
+                {activeSection === "contributions" && "All Land Contributions"}
+                {activeSection === "registered-kingdoms" && "Registered Users Contributions"}
                 {activeSection === "analytics" && "Analytics Dashboard"}
                 {activeSection === "payment-settings" && "Payment Settings"}
                 {activeSection === "settings" && "System Settings"}
@@ -418,7 +431,8 @@ export default function AdminDashboard() {
                 {activeSection === "users" && "Review and approve user registrations"}
                 {activeSection === "kingdoms" && "View and manage all registered kingdoms"}
                 {activeSection === "payments" && "Process payment requests and payouts"}
-                {activeSection === "contributions" && "Monitor land contribution data from League of Kingdoms"}
+                {activeSection === "contributions" && "View all land contributions from LOK API"}
+                {activeSection === "registered-kingdoms" && "View contributions only from registered users' kingdoms"}
                 {activeSection === "analytics" && "View detailed analytics and reporting"}
                 {activeSection === "payment-settings" && "Configure payout rates and payment rules"}
                 {activeSection === "settings" && "Configure system settings and preferences"}
@@ -444,7 +458,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         </header>
-        
+
         {/* Dashboard Content */}
         <main className="p-6 space-y-6">
           {/* Overview Section */}
@@ -479,7 +493,7 @@ export default function AdminDashboard() {
               </div>
             </>
           )}
-          
+
           {/* User Management Section - Only show in overview and users sections */}
           {(activeSection === "overview" || activeSection === "users") && (
           <div className="space-y-6">
@@ -487,7 +501,7 @@ export default function AdminDashboard() {
             {activeSection === "users" && (
               <AdminUserManagement />
             )}
-            
+
             {/* Pending approvals - Show in both sections */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* User Approvals */}
@@ -552,7 +566,7 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Payment Approvals */}
             <Card>
               <CardHeader>
@@ -618,12 +632,20 @@ export default function AdminDashboard() {
             </div>
           </div>
           )}
-          
-          {/* Land Analytics Section - Only show in contributions section */}
+
+          {/* Land Contributions Section */}
           {activeSection === "contributions" && (
-          <div className="space-y-6">
-            <AdminLandDashboard />
-          </div>
+            <LandContributions isAdmin={true} />
+          )}
+
+          {/* Registered Users Contributions Section */}
+          {activeSection === "registered-kingdoms" && (
+            <LandContributions isAdmin={true} registeredOnly={true} />
+          )}
+
+          {/* Land Stats Section */}
+          {activeSection === "land-stats" && (
+            <LandStats />
           )}
 
           {/* Other Sections */}

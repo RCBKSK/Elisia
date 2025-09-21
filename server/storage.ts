@@ -48,56 +48,57 @@ export interface IStorage {
   approveUser(id: string): Promise<void>;
   rejectUser(id: string): Promise<void>;
   deleteUser(id: string): Promise<void>;
-  
+
   // Kingdom operations
   getUserKingdoms(userId: string): Promise<Kingdom[]>;
   getKingdomByLokId(lokKingdomId: string): Promise<Kingdom | undefined>;
   createKingdom(kingdom: InsertKingdom): Promise<Kingdom>;
   updateKingdom(id: string, kingdom: Partial<InsertKingdom>): Promise<Kingdom>;
   getKingdom(id: string): Promise<Kingdom | undefined>;
+  deleteKingdom(id: string): Promise<void>;
   getAllKingdoms(): Promise<Kingdom[]>;
-  
+
   // Contribution operations
   getKingdomContributions(kingdomId: string): Promise<Contribution[]>;
   createContribution(contribution: InsertContribution): Promise<Contribution>;
   getContributionsByPeriod(kingdomId: string, period: string): Promise<Contribution[]>;
-  
+
   // Wallet operations
   getUserWallets(userId: string): Promise<Wallet[]>;
   getWalletByAddress(address: string): Promise<Wallet | undefined>;
   createWallet(wallet: InsertWallet): Promise<Wallet>;
   updateWallet(id: string, wallet: Partial<InsertWallet>): Promise<Wallet>;
-  
+
   // Payment request operations
   getUserPaymentRequests(userId: string): Promise<PaymentRequest[]>;
   createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
   getPendingPaymentRequests(): Promise<PaymentRequest[]>;
   getAllPaymentRequests(): Promise<PaymentRequest[]>;
   updatePaymentRequestStatus(id: string, status: string, adminNotes?: string, processedBy?: string): Promise<PaymentRequest>;
-  
+
   // Payment settings operations
   getActivePaymentSettings(): Promise<PaymentSettings | undefined>;
   createPaymentSettings(settings: InsertPaymentSettings): Promise<PaymentSettings>;
   updatePaymentSettings(id: string, settings: Partial<InsertPaymentSettings>): Promise<PaymentSettings>;
-  
+
   // Payout operations
   getUserPayouts(userId: string): Promise<Payout[]>;
   createPayout(payout: InsertPayout): Promise<Payout>;
   updatePayoutStatus(id: string, status: string, transactionHash?: string, adminNotes?: string, processedBy?: string): Promise<Payout>;
   getPendingPayouts(): Promise<Payout[]>;
-  
+
   // User payout summary operations
   getUserPayoutSummary(userId: string): Promise<UserPayoutSummary | undefined>;
   updateUserPayoutSummary(userId: string, summary: Partial<InsertUserPayoutSummary>): Promise<UserPayoutSummary>;
   calculateUnpaidContributions(userId: string): Promise<{ amount: number; contributions: Contribution[] }>;
-  
+
   // Drago rental operations
   getUserDragoRentalRequests(userId: string): Promise<DragoRentalRequest[]>;
   createDragoRentalRequest(data: InsertDragoRentalRequest): Promise<DragoRentalRequest>;
   getAllDragoRentalRequests(): Promise<DragoRentalRequest[]>;
   getPendingDragoRentalRequests(): Promise<DragoRentalRequest[]>;
   updateDragoRentalRequestStatus(id: string, status: string, adminNotes?: string, processedBy?: string, rentalStartDate?: Date, rentalEndDate?: Date): Promise<DragoRentalRequest>;
-  
+
   // Announcement operations
   createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
   getActiveAnnouncements(): Promise<Announcement[]>;
@@ -204,7 +205,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(paymentRequests).where(eq(paymentRequests.userId, id));
     await db.delete(payouts).where(eq(payouts.userId, id));
     await db.delete(userPayoutSummary).where(eq(userPayoutSummary.userId, id));
-    
+
     // Finally delete the user
     await db.delete(users).where(eq(users.id, id));
   }
@@ -238,7 +239,12 @@ export class DatabaseStorage implements IStorage {
     return kingdom;
   }
 
-  async getAllKingdoms(): Promise<Kingdom[]> {
+  async deleteKingdom(id: string): Promise<void> {
+    await db.delete(contributions).where(eq(contributions.kingdomId, id));
+    await db.delete(kingdoms).where(eq(kingdoms.id, id));
+  }
+
+  async getAllKingdoms(): Promise<Kingdom[]>{
     return db.select().from(kingdoms);
   }
 
@@ -253,7 +259,7 @@ export class DatabaseStorage implements IStorage {
 
   async createContribution(contribution: InsertContribution): Promise<Contribution> {
     const [newContribution] = await db.insert(contributions).values(contribution).returning();
-    
+
     // Update kingdom total contributions
     await db
       .update(kingdoms)
@@ -262,7 +268,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(kingdoms.id, contribution.kingdomId));
-    
+
     return newContribution;
   }
 
@@ -312,7 +318,7 @@ export class DatabaseStorage implements IStorage {
     return newRequest;
   }
 
-  async getPendingPaymentRequests(): Promise<PaymentRequest[]> {
+  async getPendingPaymentRequests(): Promise<PaymentRequest[]>{
     return db
       .select()
       .from(paymentRequests)
@@ -340,7 +346,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Drago rental operations
-  async getUserDragoRentalRequests(userId: string): Promise<DragoRentalRequest[]> {
+  async getUserDragoRentalRequests(userId: string): Promise<DragoRentalRequest[]>{
     return db
       .select()
       .from(dragoRentalRequests)
@@ -353,14 +359,14 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
-  async getAllDragoRentalRequests(): Promise<DragoRentalRequest[]> {
+  async getAllDragoRentalRequests(): Promise<DragoRentalRequest[]>{
     return db
       .select()
       .from(dragoRentalRequests)
       .orderBy(desc(dragoRentalRequests.requestedAt));
   }
 
-  async getPendingDragoRentalRequests(): Promise<DragoRentalRequest[]> {
+  async getPendingDragoRentalRequests(): Promise<DragoRentalRequest[]>{
     return db
       .select()
       .from(dragoRentalRequests)
@@ -369,9 +375,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateDragoRentalRequestStatus(
-    id: string, 
-    status: string, 
-    adminNotes?: string, 
+    id: string,
+    status: string,
+    adminNotes?: string,
     processedBy?: string,
     rentalStartDate?: Date,
     rentalEndDate?: Date
@@ -408,7 +414,7 @@ export class DatabaseStorage implements IStorage {
       .update(paymentSettings)
       .set({ isActive: false })
       .where(eq(paymentSettings.isActive, true));
-    
+
     const [newSettings] = await db.insert(paymentSettings).values(settings).returning();
     return newSettings;
   }
@@ -433,7 +439,7 @@ export class DatabaseStorage implements IStorage {
 
   async createPayout(payout: InsertPayout): Promise<Payout> {
     const [newPayout] = await db.insert(payouts).values(payout).returning();
-    
+
     // Mark associated contributions as paid
     if (payout.userId) {
       await db
@@ -446,7 +452,7 @@ export class DatabaseStorage implements IStorage {
           )
         );
     }
-    
+
     return newPayout;
   }
 
@@ -523,7 +529,7 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(contributions.createdAt));
 
-    const amount = unpaidContributions.reduce((sum, row) => 
+    const amount = unpaidContributions.reduce((sum, row) =>
       sum + parseFloat(row.contributions?.amount || "0"), 0);
 
     return {
@@ -559,8 +565,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(paymentRequests.status, "pending"));
 
     const [totalPayouts] = await db
-      .select({ 
-        total: sql<string>`COALESCE(SUM(${paymentRequests.amount}), 0)` 
+      .select({
+        total: sql<string>`COALESCE(SUM(${paymentRequests.amount}), 0)`
       })
       .from(paymentRequests)
       .where(eq(paymentRequests.status, "paid"));

@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import ContributionForm from "./contribution-form";
 
 const kingdomSchema = z.object({
@@ -83,6 +84,26 @@ export default function KingdomCard({ kingdom }: KingdomCardProps) {
         return;
       }
       toast({ title: "Error", description: "Failed to update kingdom", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", `/api/kingdoms/${kingdom.id}`),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Kingdom deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/kingdoms"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({ title: "Error", description: "Failed to delete kingdom", variant: "destructive" });
     },
   });
 
@@ -307,6 +328,35 @@ export default function KingdomCard({ kingdom }: KingdomCardProps) {
           >
             <i className="fas fa-edit"></i>
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                data-testid={`button-delete-kingdom-${kingdom.id}`}
+              >
+                <i className="fas fa-trash"></i>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Kingdom</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete "{kingdom.name}"? This action cannot be undone and will remove all associated data including contributions and payment history.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
     </Card>

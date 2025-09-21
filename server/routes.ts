@@ -104,6 +104,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/kingdoms/:id', isApproved, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      
+      // First verify the kingdom belongs to the user
+      const kingdom = await storage.getKingdom(id);
+      if (!kingdom) {
+        return res.status(404).json({ message: "Kingdom not found" });
+      }
+      
+      if (kingdom.userId !== userId) {
+        return res.status(403).json({ message: "You can only delete your own kingdoms" });
+      }
+      
+      await storage.deleteKingdom(id);
+      res.json({ message: "Kingdom deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting kingdom:", error);
+      res.status(500).json({ message: "Failed to delete kingdom" });
+    }
+  });
+
   // Contribution routes
   app.get('/api/kingdoms/:id/contributions', isApproved, async (req: any, res) => {
     try {

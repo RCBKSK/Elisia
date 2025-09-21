@@ -176,16 +176,18 @@ export class DatabaseStorage implements IStorage {
             'lokKingdomId', ${kingdoms.lokKingdomId},
             'level', ${kingdoms.level},
             'status', ${kingdoms.status},
-            'totalContributions', ${kingdoms.totalContributions}
-          ) ORDER BY ${kingdoms.createdAt}
+            'totalContributions', ${kingdoms.totalContributions},
+            'createdAt', ${kingdoms.createdAt}
+          )
         ) FILTER (WHERE ${kingdoms.id} IS NOT NULL), '[]'::jsonb)`.as('kingdoms'),
         wallets: sql`COALESCE(jsonb_agg(
           DISTINCT jsonb_build_object(
             'id', ${wallets.id},
             'address', ${wallets.address},
             'isPrimary', ${wallets.isPrimary},
-            'isActive', ${wallets.isActive}
-          ) ORDER BY ${wallets.createdAt}
+            'isActive', ${wallets.isActive},
+            'createdAt', ${wallets.createdAt}
+          )
         ) FILTER (WHERE ${wallets.id} IS NOT NULL), '[]'::jsonb)`.as('wallets'),
       })
       .from(users)

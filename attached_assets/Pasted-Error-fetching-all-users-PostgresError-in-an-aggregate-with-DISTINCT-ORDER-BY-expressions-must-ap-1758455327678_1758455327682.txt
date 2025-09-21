@@ -1,0 +1,69 @@
+Error fetching all users: PostgresError: in an aggregate with DISTINCT, ORDER BY expressions must appear in argument list
+    at ErrorResponse (file:///opt/render/project/src/node_modules/postgres/src/connection.js:794:26)
+    at handle (file:///opt/render/project/src/node_modules/postgres/src/connection.js:480:6)
+    at TLSSocket.data (file:///opt/render/project/src/node_modules/postgres/src/connection.js:315:9)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23) {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '42P10',
+  position: '600',
+  file: 'parse_clause.c',
+  line: '3013',
+  routine: 'transformDistinctClause'
+}
+11:47:13 AM [express] GET /api/admin/all-users 500 in 499ms :: {"message":"Failed to fetch all users"}
+Error fetching all users: PostgresError: in an aggregate with DISTINCT, ORDER BY expressions must appear in argument list
+    at ErrorResponse (file:///opt/render/project/src/node_modules/postgres/src/connection.js:794:26)
+    at handle (file:///opt/render/project/src/node_modules/postgres/src/connection.js:480:6)
+    at TLSSocket.data (file:///opt/render/project/src/node_modules/postgres/src/connection.js:315:9)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23) {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '42P10',
+  position: '600',
+  file: 'parse_clause.c',
+  line: '3013',
+  routine: 'transformDistinctClause'
+}
+11:47:22 AM [express] GET /api/admin/all-users 500 in 490ms :: {"message":"Failed to fetch all users"}
+[calculateDates] Calculating dates for period: currentWeek, customDays: undefined
+[calculateDates] Range for period 'currentWeek': From: 2025-09-21, To: 2025-09-20
+[getLokContributionData] Overall requested period (UTC): 2025-09-21 to 2025-09-20
+Generated LOK API date chunks for overall range 2025-09-21 to 2025-09-20: []
+Total raw contributions collected: 0 items
+Total contributions after filtering: 0 items
+11:47:29 AM [express] GET /api/admin/land-stats 304 in 327ms :: {"from":"2025-09-21","to":"2025-09-20…
+[calculateDates] Calculating dates for period: currentWeek, customDays: undefined
+[calculateDates] Range for period 'currentWeek': From: 2025-09-21, To: 2025-09-20
+[getLokContributionData] Overall requested period (UTC): 2025-09-21 to 2025-09-20
+Generated LOK API date chunks for overall range 2025-09-21 to 2025-09-20: []
+Total raw contributions collected: 0 items
+Total contributions after filtering: 0 items
+11:47:29 AM [express] GET /api/admin/land-contributions 304 in 647ms :: {"data":[],"from":"2025-09-21…
+Error fetching all users: PostgresError: in an aggregate with DISTINCT, ORDER BY expressions must appear in argument list
+    at ErrorResponse (file:///opt/render/project/src/node_modules/postgres/src/connection.js:794:26)
+    at handle (file:///opt/render/project/src/node_modules/postgres/src/connection.js:480:6)
+    at TLSSocket.data (file:///opt/render/project/src/node_modules/postgres/src/connection.js:315:9)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23) {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '42P10',
+  position: '600',
+  file: 'parse_clause.c',
+  line: '3013',
+  routine: 'transformDistinctClause'
+}
+11:47:32 AM [express] GET /api/admin/all-users 500 in 490ms :: {"message":"Failed to fetch all users"}
+11:47:34 AM [express] GET /api/admin/pending-payments 304 in 652ms :: []
